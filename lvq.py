@@ -16,7 +16,6 @@ class LVQ(Initializable):
         self.dim = dim
 
     def _allocate(self):
-        print 'allocate'
         W = shared_floatx_nans((self.n_classes*self.n_protos, self.dim), name='prototypes')
         self.params.append(W)
         print self.params
