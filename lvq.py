@@ -31,7 +31,9 @@ class LVQ(Initializable):
         d_correct = (D + (1-mask)*numpy.float32(2e25)).min(axis=1)
         d_incorrect = (D + mask*numpy.float32(2e25)).min(axis=1)
         
-        cost = ((d_correct - d_incorrect)/(d_correct+d_incorrect)).mean()
+        l = 3.0
+        c = (d_correct - d_incorrect)/(d_correct+d_incorrect)
+        cost = tensor.switch(c < -0.3, -0.3, c).mean()
         misclass = (tensor.switch(d_correct - d_incorrect < 0, 0.0, 1.0).sum())/mask.shape[0]
         return cost, misclass
         
