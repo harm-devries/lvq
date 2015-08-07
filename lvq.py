@@ -17,23 +17,22 @@ class LVQ(Initializable):
 
     def _allocate(self):
         W = shared_floatx_nans((self.n_classes*self.n_protos, self.dim), name='prototypes')
-        self.params.append(W)
-        print self.params
+        self.parameters.append(W)
 
     def _initialize(self):
-        W, = self.params
+        W, = self.parameters
         self.weights_init.initialize(W, self.rng)
         
     @application(inputs=['x', 'mask'], outputs=['cost', 'misclass'])
     def apply(self, x, mask):
-        W, = self.params
+        W, = self.parameters
         D = ((W**2).sum(axis=1, keepdims=True).T + (x**2).sum(axis=1, keepdims=True) - 2*tensor.dot(x, W.T))
+        self.add_auxiliary_variable(D, name='D')
         d_correct = (D + (1-mask)*numpy.float32(2e25)).min(axis=1)
         d_incorrect = (D + mask*numpy.float32(2e25)).min(axis=1)
         
-        l = 3.0
         c = (d_correct - d_incorrect)/(d_correct+d_incorrect)
-        cost = tensor.switch(c < -0.3, -0.3, c).mean()
+        cost = c.mean()
         misclass = (tensor.switch(d_correct - d_incorrect < 0, 0.0, 1.0).sum())/mask.shape[0]
         return cost, misclass
         
