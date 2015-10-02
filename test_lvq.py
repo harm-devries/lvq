@@ -5,27 +5,27 @@ import numpy
 num_protos = 5
 n_out= 5
 n_examples = 5000
-eta=0.2
+eta=1
 
 h3 = tensor.fmatrix('x')
 mask = tensor.fmatrix('mask')
 
-W = theano.shared(numpy.random.normal(size=(num_protos, n_out)))
+W = theano.shared(numpy.random.normal(loc=0.0, size=(num_protos, n_out)))
 D = ((W**2).sum(axis=1, keepdims=True).T + (h3**2).sum(axis=1, keepdims=True) - 2*tensor.dot(h3, W.T))
 
 d_correct = (D + (1-mask)*numpy.float32(1e30)).min(axis=1)
 d_incorrect = (D + mask*numpy.float32(1e30)).min(axis=1)
 
 mu = numpy.float32(0.2)
-cost = (d_correct - d_incorrect) + 5.0*d_correct
-misclass = (tensor.switch(d_correct - d_incorrect < 0, 0.0, 1.0).sum())/mask.shape[0]
+cost = (d_correct - d_incorrect)/(d_correct + d_incorrect)
+misclass = tensor.exp(2.25*cost).mean()
 loss = cost.mean()
 
 params = [W]
 grad = theano.grad(loss, params)
 updates = [p-eta*g_p for p, g_p in zip(params, grad)]
 
-f = theano.function([h3, mask], [loss, misclass], updates=zip(params, updates))
+f = theano.function([h3, mask], [(grad[0]**2).sum(), loss, misclass], updates=zip(params, updates))
 l = theano.function([h3, mask], [loss, misclass])
 
 loc = -20

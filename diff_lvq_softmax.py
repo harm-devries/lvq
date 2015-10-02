@@ -19,7 +19,7 @@ d_incorrect = (D + mask*numpy.float32(1e30)).min(axis=1)
 mu = numpy.float32(0.2)
 cost = (d_correct - d_incorrect)/(d_correct + d_incorrect)
 misclass = (tensor.switch(d_correct - d_incorrect < 0, 0.0, 1.0).sum())/mask.shape[0]
-loss = cost.mean()
+loss = (tensor.exp(2.0*cost)).mean()
 
 params = [W]
 grad = theano.grad(loss, params)
@@ -67,16 +67,16 @@ from scipy.spatial import voronoi_plot_2d, Voronoi
 
 weights = W.get_value()
 
-vor = Voronoi(weights)
-voronoi_plot_2d(vor)
+#vor = Voronoi(weights)
+#voronoi_plot_2d(vor)
 
-plt.plot(d1[:, 0], d1[:, 1], 'ro', markersize=3)
-plt.plot(d2[:, 0], d2[:, 1], 'bo', markersize=3)
-plt.plot(d3[:, 0], d3[:, 1], 'go', markersize=3)
+plt.plot(d1[:, 0], d1[:, 1], 'ro', alpha=0.5, markersize=3)
+plt.plot(d2[:, 0], d2[:, 1], 'bo', alpha=0.5, markersize=3)
+plt.plot(d3[:, 0], d3[:, 1], 'go', alpha=0.5, markersize=3)
 
-plt.plot(weights[0, 0], weights[0, 1], 'r*', markersize=20)
-plt.plot(weights[1, 0], weights[1, 1], 'b*', markersize=20)
-plt.plot(weights[2, 0], weights[2, 1], 'g*', markersize=20)
+plt.plot(weights[0, 0], weights[0, 1], 'r*', alpha=0.5, markersize=20)
+plt.plot(weights[1, 0], weights[1, 1], 'b*', alpha=0.5, markersize=20)
+plt.plot(weights[2, 0], weights[2, 1], 'g*', alpha=0.5, markersize=20)
 
 X = numpy.arange(-10, 10, 0.1)
 Y = numpy.arange(-10, 10, 0.1)
@@ -86,7 +86,7 @@ for i in range(len(X)):
     for j in range(len(Y)):
         inp = numpy.array([[X[i], Y[j]]]).astype('float32')
         d = numpy.sort(f_D(inp))
-        Z[j, i] = (d[0][0]- d[0][1])/(d[0][0] + d[0][1])
+        Z[j, i] = -1*(d[0][0]- d[0][1])/(d[0][0] + d[0][1])
 
 im = plt.imshow(Z[:, :], interpolation='bilinear', origin='lower',
                 cmap=cm.gray, extent=(-10, 10, -10, 10))
@@ -94,7 +94,7 @@ plt.colorbar(im, orientation='horizontal', shrink=0.8)
 
 plt.xlim((-10, 10))
 plt.ylim((-10, 10))
-plt.savefig('lvq.pdf')
+plt.savefig('mnist/figures/lvq.pdf')
 
 
 ###################
@@ -109,10 +109,11 @@ b = theano.shared(numpy.zeros((num_protos,)).astype('float32'))
 y = tensor.ivector('y')
 
 h = tensor.dot(h3, W2) + b
+h = tensor.switch(h < 0, -h , h)
 sm = Softmax()
 pred = sm.apply(h)
 misclass = MisclassificationRate().apply(y, pred)
-c = sm.categorical_cross_entropy(y, h)
+c = sm.categorical_cross_entropy(y, h).mean()
 
 s_params = [W2, b]
 s_grad = theano.grad(c, s_params)
@@ -127,11 +128,13 @@ for j in range(200):
 	else:
             s_f(data[i*batch_size:(i+1)*batch_size, :], labels[i*batch_size:(i+1)*batch_size])
 
+print b.get_value()
 fig1 = plt.figure()
 
-plt.plot(d1[:, 0], d1[:, 1], 'ro', markersize=3)
-plt.plot(d2[:, 0], d2[:, 1], 'bo', markersize=3)
-plt.plot(d3[:, 0], d3[:, 1], 'go', markersize=3)
+plt.plot(d1[:, 0], d1[:, 1], 'ro', alpha=0.5, markersize=3)
+plt.plot(d2[:, 0], d2[:, 1], 'bo', alpha=0.5, markersize=3)
+plt.plot(d3[:, 0], d3[:, 1], 'go', alpha=0.5, markersize=3)
+
 
 for i in range(len(X)):
     for j in range(len(Y)):
@@ -144,5 +147,5 @@ plt.colorbar(im, orientation='horizontal', shrink=0.8)
 
 plt.xlim((-10, 10))
 plt.ylim((-10, 10))
-plt.savefig('softmax.pdf')
+plt.savefig('mnist/figures/softmax.pdf')
 
