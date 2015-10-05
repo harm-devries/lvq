@@ -2,8 +2,8 @@ from train_lvq import main
 
 def jobman_entrypoint(state, channel):
     
-    main(state=state, channel=channel, **state)
-
+    val_err = main(state=state, channel=channel, **state)
+    channel.val_err = val_err
     return channel.COMPLETE
 
 def jobman_insert_random(n_jobs):
@@ -69,16 +69,15 @@ def view(table="lvq_mnist",
     columns = [experiments.columns.id,
                experiments.columns.jobman_status,
                experiments.columns.tag,
-               experiments.columns.nhiddens0,
+               experiments.columns.n_hiddens,
+               experiments.columns.n_out,
                experiments.columns.learningrate,
                experiments.columns.momentum,
-               experiments.columns.batchsize,
-               experiments.columns.method,
-               experiments.columns.trainerror,]
+               experiments.columns.gamma]
 
     results = sqlalchemy.select(columns,
                                 order_by=[experiments.columns.tag,
-                                    sqlalchemy.desc(experiments.columns.trainerror)]).execute()
+                                    sqlalchemy.desc(experiments.columns.learning_rate)]).execute()
     results = [map(lambda x: x.name, columns)] + list(results)
 
     def get_max_width(table, index):
@@ -111,3 +110,12 @@ def view(table="lvq_mnist",
             for i in range(len(row)):
                 print "".ljust(col_paddings[i] + 1, "-") + " +",
             print
+            
+if __name__ == "__main__":
+    if "insert" in sys.argv:
+        jobman_insert_random(int(sys.argv[2]))
+    elif "view" in sys.argv:
+        view()
+    else:
+        main()
+            
