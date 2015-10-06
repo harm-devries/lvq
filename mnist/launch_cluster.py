@@ -1,4 +1,8 @@
+import sys
 from train_lvq import main
+
+import jobman
+from jobman.tools import DD
 
 def jobman_entrypoint(state, channel):
     
@@ -36,7 +40,7 @@ def jobman_insert_random(n_jobs):
             jobman.sql.insert_dict(job, db)
 
         print "inserted %d jobs" % len(jobs)
-        print "To run: jobdispatch --condor --gpu --env=THEANO_FLAGS='floatX=float32, device=gpu' --repeat_jobs=%d jobman sql -n 1 'postgres://dauphiya:wt17se79@opter.iro.umontreal.ca/dauphiya_db/saddle_mnist_ae' ." % len(jobs)
+        print "To run: jobdispatch --gpu --env=THEANO_FLAGS='floatX=float32, device=gpu' --repeat_jobs=%d jobman sql -n 1 'postgres://devries:12f19e7ecc@opter.iro.umontreal.ca/devries_db/lvq_mnist' ." % len(jobs)
 
 
 def view(table="lvq_mnist",
