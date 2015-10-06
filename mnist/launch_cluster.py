@@ -1,6 +1,7 @@
 import sys
 from train_lvq import main
 
+import numpy
 import jobman
 from jobman.tools import DD
 
