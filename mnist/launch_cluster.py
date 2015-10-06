@@ -74,15 +74,16 @@ def view(table="lvq_mnist",
     columns = [experiments.columns.id,
                experiments.columns.jobman_status,
                experiments.columns.tag,
-               experiments.columns.n_hiddens,
-               experiments.columns.n_out,
+               experiments.columns.nhiddens,
+               experiments.columns.nout,
                experiments.columns.learningrate,
                experiments.columns.momentum,
-               experiments.columns.gamma]
+               experiments.columns.gamma,
+               experiments.columns.valerr]
 
     results = sqlalchemy.select(columns,
                                 order_by=[experiments.columns.tag,
-                                    sqlalchemy.desc(experiments.columns.learning_rate)]).execute()
+                                    sqlalchemy.desc(experiments.columns.valerr)]).execute()
     results = [map(lambda x: x.name, columns)] + list(results)
 
     def get_max_width(table, index):
