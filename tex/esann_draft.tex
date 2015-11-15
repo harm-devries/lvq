@@ -1,7 +1,8 @@
 \documentclass{esannV2}
-\usepackage[dvips]{graphicx}
+\usepackage{graphicx}
 \usepackage[latin1]{inputenc}
 \usepackage{amssymb,amsmath,array}
+\usepackage{subfigure}
 
 %***********************************************************************
 % !!!! IMPORTANT NOTICE ON TEXT MARGINS !!!!!
@@ -36,7 +37,7 @@
 
 \begin{document}
 %style file for ESANN manuscripts
-\title{Deep Generalized Learning Vector Quantization}
+\title{Deep Learning Vector Quantization}
 
 %***********************************************************************
 % AUTHORS INFORMATION AREA
@@ -65,102 +66,84 @@ Address of Second Author's school - Country of Second Author's school\\
 \maketitle
 
 \begin{abstract}
-We propose an extension of Generalized Learning Vector Quantization, a popular prototype based classifier, in which distances are measured after a non-linear transformation parameterized by a deep neural network. 
+We introduce an extension of Generalized Learning Vector Quantization, a popular prototype based classifier, that incorporates non-linear metric learning by a deep neural network. 
 \end{abstract}
 
-\section{Typesetting an ESANN document using \LaTeX}
 
-This is a sample file. Please use this file to correctly typeset a
-submission to the ESANN conference. The associated pdf file will
-help you to have an idea of what your paper should look like.
+\section{Generalized Matrix Learning Vector Quantization}
+We assume we are given training data $(\mathbf{x}^{(n)}, y^{(n)}) \in R^D \times \{0, ..., K-1\}$, $n=1, ..., N$, where $D$ is the dimensionality of the input, and $K$ the number of classes. A LVQ classifier consist of a set of prototypes ${\mathbf{w}_j} \in R^D, j=1, ..., M$ with an associated class label $c(w_j) \in \{1, ..., K\}$. In this work we consider one prototype per class, although ordinary GLVQ often requires multiple prototypes per class to account for multiple modes in the input space. Classification takes place by a nearest prototype scheme i.e. a new data point $\tilde{x}$ is assigned to the class of the nearest prototype $c(\mbox{arg min}_j d(\tilde{x}, \mathbf{w}_j))$ according to some distance measure $d(\tilde{x}, w_j)$. Throughout the following we consider the Euclidean distance $d(\tilde{x}, w_j) = \|x - w_j\|_2$ but other differentiable distance measures can be used. 
 
-\subsection{Page format and margins}
-Please avoid using DVI2PDF or PS2PDF converters: some undesired
-shifting/scaling may occur when using these programs
-It is strongly recommended to use the DVIPS converters, and to submit
-PS file. You may submit a PDF file if and only if you use ADOBE ACROBAT
-to convert your PS file to PDF.
-%
-Check that you have set the paper size to A4 (and NOT to letter) in your
-dvi2ps converter, in Adobe Acrobat if you use it, and in any printer driver
-that you could use.  You also have to disable the 'scale to fit paper' option
-of your printer driver.
-%
-In any case, please check carefully that the final size of the top and
-bottom margins is 5.2 cm and of the left and right margins is 4.4 cm.
-%t is your responsibility to verify this important requirement.  If these margin requirements and not fulfilled at the end of your file generation process, please use the commands at the beginning of the ESANNV2.tex file to correct them.  Otherwise, please do not modify these commands.
+Training aims to find the locations of the prototypes such that the data points are mapped to their corresponding class labels. Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} aims to achieve this by minimizing the following training criterion:
+\begin{equation}
+ L_{GLVQ}(\theta) = \sum_n \phi\left(\frac{d^+ - d^-}{d^+ + d^-}\right)
+\end{equation}
+where $d^+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, w_j)$ and $d^- = \mbox{min}_{c(w_j)\neq y} d(x_i, w_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The complete term is negative when a data point is correctly classified. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. Often, a trade-off between the two terms is achieved by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
+
+The GLVQ cost function strongly relies on the fact that most protypes are correctly initialized from the beginning. 
+
+\begin{equation}
+ L_{SNG} = \sum_n \sum_{j\neq y^{(n)}} h_\gamma \phi\left(\frac{d^+ - d(x^{(n)}, w_j)}{d^+ + d(x^{(n)}, w_j)}\right)
+\end{equation}
+with $h = \exp(-\gamma k)/ \sum_{j=0}^{K-1} \exp(-\gamma j)$
+
+There are two other important observation to make about the cost function: 
+\begin{itemize}
+\item The loss is invariant to the scale of the distances. That is, if each distance is multiplied by some constant $c \neq 0$\footnote{The closest correct and closest wrong prototype don't change}, the corresponding cost function value remains the same. 
+\item The loss is sensitive to an additive term. That is, if we add some constant $a > 0$ to the distances $d^+$ and $d^-$, this contribution will cancel in the numerator while it will add $2a$ to the denominator. For correctly classified data points (i.e. negative terms) this will increase the cost function value.          
+\end{itemize} 
+In summary, the first bullet point points out that we are maximizing a \emph{scale-invariant} margin. The second point is important to provide low confidence values far away from the data as will be explained in the next section. 
 
 
-\subsection{Additional packages and functions}
+\section{Softmax}
+The last layer in a deep neural network is frequently a softmax\footnote{Better characterised by softargmax}:
+\begin{equation}
+p(\hat{y}_j| \mathbf{x}^{(n)}) = \frac{\exp(w_j^\top \mathbf{x} + b_i)}{\sum_i \exp(w_i^\top \mathbf{x} + b_i)}
+\end{equation}
+which provides a distribution over the output labels. It is followed by a cross entropy loss $L_{cross-entropy} = \sum_{k=1}^K p(y_k|\mathbf{x}) \ln p(\hat{y}_k|\mathbf{x})$ which compares the conditional output distribution against the target distribution $p(\mathbf{y}|\mathbf{x})$. For crisp classification problems the target distribution is a $1-$of$-K$ vector, and the loss function simplifies to the negative log likelihood (NLL):
+\begin{equation}
+ - \sum_{n=1}^N \ln p(\hat{y}^{(n)}_j|\mathbf{x}^{(n)})
+\end{equation}
 
-Update the sample file according to your text. You can add
-packages or declare new \LaTeX\ functions if and only if there is no conflict between your packages and the esannV2.cls style file.
+To illustrate the difference with GLVQ, we provide an artifically generated three-class problem as shown in Fig. \ref{figure:diff_glvq_softmax}. 
 
-\subsection{Style information}
+\begin{figure}[t]
+\centering{
+\subfigure[Softmax]{
+ \includegraphics[width=0.48\textwidth, trim={3cm 0 1cm 0}]{../mnist/figures/softmax.pdf}}
+\subfigure[GLVQ]{
+ \includegraphics[width=0.48\textwidth, trim={3cm 0 1cm 0}]{../mnist/figures/lvq.pdf}}}
+\caption{An artifically generated three class problem for which we have trained (a) a softmax classifier and (b) a GLVQ classifier. The background color (white for high) indicates the confidence values for a decision, that is $\mbox{arg max}_i\ p(y_j|x)$ for the softmax and $-\frac{d^{+} - d^{-}}{d^{+} + d^{-}}$\protect\footnotemark for the GLVQ classifier. The softmax classifier will assign a high confidence value to new data point in the right upper corner (far from the data), while GLVQ will not. }
+\label{figure:diff_glvq_softmax}
+\end{figure}
 
-\subsubsection{Page numbers}
-Please do not add page numbers to this style; page numbers will be added by the publisher.
-\subsubsection{Page headings}
-Do not add headings to your document.
-\subsection{Mathematics}
-You may include additional packages for typesetting
-algorithms, mathematical formula or to define new operators and environments
-if and only if there is no conflict with the esannV2.cls
-file.
+\footnotetext{We multiplied the cost with $-1$ such that higher values indicates higher confidence.}
 
-It is recommended to avoid the numbering of equations when not
-necessary. When dealing with equation arrays, it could be
-necessary to label several (in)equalities. You can do it using the
-`$\backslash$stackrel' operator (see the ESANNV2.tex source file);
-example:
+\section{Deep GLVQ}
+We propose to extend the GLVQ cost function by parameterizing the distance function as:
+\begin{equation}
+ d(x, w_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
+\end{equation}
+where $f$ is a deep neural network with parameters $\mathbf{\theta}$. 
 
-\begin{eqnarray}
-c&=&|d|+|e|\nonumber\\
-&\stackrel{\text{(a)}}{=}&d+e\nonumber\\
-&\stackrel{\text{(b)}}{\geq}&\sqrt{f}\enspace,
-\end{eqnarray}
-\noindent where the equality (a) results from the fact that both
-$d$ and $e$ are positive while (b) comes from the definition of
-$f$.
 
-\subsection{Tables and figures}
+\section{Experiments}
+We present preliminary experiments on MNIST. 
 
-Figure \ref{Fig:MV} shows an example of figure and related
-caption.  Do not use too small symbols and lettering in your
-figures.  Warning: your paper will be printed in black and white
-in the proceedings.  You may insert color figures, but it is your
-responsibility to check that they print correctly in black and
-white.  The color version will be kept in the ESANN electronic
-proceedings available on the web.
+\subsection{MNIST}
+We use a fully connected neural network with $1200-1200-100$ hidden units, followed by either a log softmax or GLVQ. All units have rectified linear activations. The networks are trained with batch normalization \cite{DBLP:journals/corr/IoffeS15}, and additive gaussian noise on the inputs. 
 
-% \begin{figure}[h!]
-% \centering
-% \includegraphics[scale=0.6]{ESANN2005BW.eps}
-% \caption{ESANN 2005: Announcement and call for
-% papers.}\label{Fig:MV}
-% \end{figure}
 
-Table \ref{Tab:AgeWeight} shows an example of table.
+\subsubsection{Adversarial examples}
+We illustrate the confidence values for 
 
-\begin{table}[h!]
-  \centering
-  \begin{tabular}{|c|c|c|}
-    \hline
-    ID & age & weight \\
-    \hline
-    1& 15 & 65 \\
-    2& 24 & 74\\
-    3& 18 & 69 \\
-    4& 32 & 78 \\
-    \hline
-  \end{tabular}
-  \caption{Age and weight of people.}\label{Tab:AgeWeight}
-\end{table}
-
-\section{Citation}
-This ESANNV2.tex file defines how to insert references, both for
-BiBTeX and non-BiBTeX users.  Please read the instructions in this
-file.
+\begin{figure}[ht]
+\centering{
+\subfigure[Softmax]{
+ \includegraphics[width=0.48\textwidth]{../mnist/figures/softmax_conf.pdf}}
+\subfigure[GLVQ]{
+ \includegraphics[width=0.48\textwidth]{../mnist/figures/lvq_conf.pdf}}}
+\caption{Histogram of the confidence values for the neural network trained with a) softmax and b) GLVQ on MNIST. The green bars indicate the confidence values for the test set, the blue bars indicate the confidence values for noise drawn from $\mathcal{U}(0.0, 1.0)^{784}$ and the red bars denote the confidence for adversarial examples on the test set. }
+\end{figure}
 
 % ****************************************************************************
 % BIBLIOGRAPHY AREA
@@ -168,45 +151,20 @@ file.
 
 \begin{footnotesize}
 
-% IF YOU DO NOT USE BIBTEX, USE THE FOLLOWING SAMPLE SCHEME FOR THE REFERENCES
-% ----------------------------------------------------------------------------
-\begin{thebibliography}{99}
-
-% For books
-\bibitem{Haykin_book} S. Haykin, editor. \emph{Unsupervised Adaptive Filtering vol.1 : Blind Source Separation}, John Willey ans Sons, New York, 2000.
-
-% For articles
-\bibitem{DelfosseLoubaton_article}N. Delfosse and P. Loubaton, Adaptibe blind separation of sources: A deflation
-approach, \emph{Signal Processing}, 45:59-83, Elsevier, 1995.
-
-% For paper in proceedings published as serie books (LNCS,...)
-\bibitem{CrucCichAmari_bookproceedings} S. Cruces, A. Cichocki and S. Amari, The minimum entropy and cumulants based contrast functions for blind source extraction. In J. Mira and A. Prieto, editors, proceedings of the 6$^{th}$ \emph{international workshop on artificial neural networks} ({IWANN} 2001), Lecture Notes in Computer Science 2085, pages 786-793,
-Springer-Verlag, 2001.
-
-% For paper in conference proceedings
-\bibitem{VrinsArchambeau_proceedings} F. Vrins, C. Archambeau and M. Verleysen, Towards a local separation performances estimator using common ICA contrast functions? In M. Verleysen, editor, \emph{proceedings of the $12^{th}$
-European Symposium on Artificial Neural Networks} ({ESANN} 2004),
-d-side pub., pages 211-216, April 28-30, Bruges (Belgium), 2004.
-
-% For Technical Report
-\bibitem{Stone_TechRep} J. V. Stone and J. Porrill, Undercomplete independent component analysis for signal separation and dimension
-reduction. Technical Report, Psychology Department, Sheffield
-University, Sheffield, S10 2UR, England, October 1997.
-\end{thebibliography}
-% ----------------------------------------------------------------------------
-
 % IF YOU USE BIBTEX,
 % - DELETE THE TEXT BETWEEN THE TWO ABOVE DASHED LINES
 % - UNCOMMENT THE NEXT TWO LINES AND REPLACE 'Name_Of_Your_BibFile'
 
-%\bibliographystyle{unsrt}
-%\bibliography{Name_Of_Your_BibFile}
+\bibliographystyle{unsrt}
+\bibliography{refs}
 
 \end{footnotesize}
 
 % ****************************************************************************
 % END OF BIBLIOGRAPHY AREA
 % ****************************************************************************
-
+\appendix
+\section{Softmax follows from gaussian class-conditionals}
+Let's assume that the class-conditional distribution $p(x|y_j) = \frac{1}{Z} \exp(-\frac{1}{2\sigma^2}(\mathbf{x} - \mathbf{w}_j)^{\top}(\mathbf{x} - \mathbf{w}_j))$ is an isotropic Gaussian distribution with normalization constant $Z = ..$. 
 
 \end{document}

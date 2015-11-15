@@ -1,5 +1,5 @@
-def main(n_hidden=1500, n_out=500, noise_std=0.5,
-         learning_rate=1e-1, momentum=0.9, gamma=2.25):
+def main(n_hiddens=1500, n_out=200, noise_std=0.5,
+         learning_rate=2e-1, momentum=0.9, gamma=2.0):
              
     ######################
     # Model 
@@ -8,7 +8,7 @@ def main(n_hidden=1500, n_out=500, noise_std=0.5,
     from theano.sandbox.rng_mrg import MRG_RandomStreams
     import numpy
     import theano.tensor as tensor
-    from lvq.lvq import LVQ, SupervisedNG, initialize_prototypes
+    from lvq.lvq import AaronLVQ, SupervisedNG, initialize_prototypes
 
     from blocks.bricks import Linear, LinearMaxout
     from blocks.bricks import Rectifier, Softmax, Logistic
@@ -30,7 +30,7 @@ def main(n_hidden=1500, n_out=500, noise_std=0.5,
     flat_y = tensor.flatten(y, outdim=1)
 
     act = Rectifier() 
-    mlp = MLP(dims=[784, n_hidden, n_hidden, n_out], activations=[act, act, None])
+    mlp = MLP(dims=[784, n_hiddens, n_hiddens, n_out], activations=[act, act, None])
     mlp.weights_init = Uniform(0.0, 0.001)
     mlp.biases_init = Constant(0.0)
     mlp.initialize()
@@ -38,7 +38,7 @@ def main(n_hidden=1500, n_out=500, noise_std=0.5,
     train_out = mlp.apply(flat_x_noise)
     test_out = mlp.inference(flat_x)
 
-    lamb = theano.shared(numpy.float32(1.0))
+    lamb = theano.shared(numpy.float32(10.0))
     lvq = SupervisedNG(10, n_out, nonlin=True, gamma=gamma, lamb=lamb, name='lvq')
 
     test_loss, test_misclass = lvq.apply(test_out, flat_y, 'test')
@@ -63,13 +63,18 @@ def main(n_hidden=1500, n_out=500, noise_std=0.5,
     batch_size_mon = 2000 # Batch size for monitoring and batch normalization
     n_batches = int(numpy.ceil(float(mnist_train.num_examples)/batch_size_mon))
     num_protos = 10
+    
+    ind = range(mnist_train.num_examples)
+    train_ind = ind[:50000]
+    val_ind = ind[50000:]
 
     def preprocessing(data_stream):
         return ForceFloatX(ScaleAndShift(data_stream, 1/255.0, 0.0, which_sources=('features',)), which_sources=('features',))
 
-    train_stream_mon = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(mnist_train.num_examples, batch_size_mon)))
-    train_stream_bn = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(mnist_train.num_examples, batch_size_mon)))
-    train_stream = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(mnist_train.num_examples, batch_size)))
+    train_stream_mon = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(train_ind, batch_size_mon)))
+    train_stream_bn = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(train_ind, batch_size_mon)))
+    train_stream = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(train_ind, batch_size)))
+    valid_stream =  preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(val_ind, batch_size)))
     test_stream = preprocessing(DataStream(mnist_test, iteration_scheme=ShuffledScheme(mnist_test.num_examples, batch_size_mon)))
 
     initialize_prototypes(lvq, x, train_out, train_stream_mon)
@@ -86,12 +91,11 @@ def main(n_hidden=1500, n_out=500, noise_std=0.5,
     from lvq.extensions import EarlyStopping, LRDecay, MomentumSwitchOff, NCScheduler
 
     from lvq.batch_norm import BatchNormExtension
-
     lr = theano.shared(numpy.float32(1e-3))
     step_rule = Momentum(learning_rate, 0.9) #Adam(learning_rate=lr) #RMSProp(learning_rate=1e-5, max_scaling=1e4)
-    num_epochs = 5
+    num_epochs = 100
 
-    earlystop = EarlyStopping('test_lvq_apply_misclass', 100, './exp/sng_dim3.pkl')
+    earlystop = EarlyStopping('valid_lvq_apply_misclass', 100, './exp/alvq.pkl')
     
     main_loop = MainLoop(
         model=model,
@@ -100,13 +104,17 @@ def main(n_hidden=1500, n_out=500, noise_std=0.5,
             cost=model.outputs[0], parameters=model.parameters, step_rule=step_rule),
         extensions=[FinishAfter(after_n_epochs=num_epochs),
                     BatchNormExtension(model, train_stream_bn, n_batches),
-                    LRDecay(step_rule.learning_rate, [100, 200]), 
-                    MomentumSwitchOff(step_rule.momentum, num_epochs-10),
-                    NCScheduler(lamb, 20., 10, num_epochs),
+                    LRDecay(step_rule.learning_rate, [20, 40, 60, 80]), 
+                    MomentumSwitchOff(step_rule.momentum, num_epochs-20),
+                    NCScheduler(lamb, 30., 0, num_epochs),
                     DataStreamMonitoring(
                         variables=[test_loss, test_misclass],
                         data_stream=train_stream_mon,
                         prefix='train'),
+                    DataStreamMonitoring(
+                        variables=[test_loss, test_misclass],
+                        data_stream=valid_stream,
+                        prefix='valid'),
                     DataStreamMonitoring(
                         variables=[test_loss, test_misclass],
                         data_stream=test_stream,

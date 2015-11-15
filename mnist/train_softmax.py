@@ -4,7 +4,6 @@
 import theano
 import theano.tensor as tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams
-from lvq import LVQ
 from blocks.bricks import Rectifier, Softmax, Linear
 from blocks.bricks.cost import MisclassificationRate
 from blocks.config import config
@@ -12,8 +11,8 @@ from blocks.initialization import Uniform, Constant
 from blocks.model import Model
 from blocks.graph import Annotation, add_annotation
 
-from initialization import NormalizedGaussian
-from batch_norm import MLP
+from lvq.initialization import NormalizedGaussian
+from lvq.batch_norm import MLP
 #from blocks.bricks import MLP
 
 seed = config.default_seed
@@ -27,7 +26,7 @@ flat_y = tensor.flatten(y, outdim=1)
 
 rect = Rectifier()
 mlp = MLP(dims=[784, 1200, 1200, 100], activations=[rect, rect, rect])
-mlp.weights_init = NormalizedGaussian()
+mlp.weights_init = Uniform(0.0, 0.001)
 mlp.biases_init = Constant(0.0)
 mlp.initialize()
 
@@ -70,12 +69,17 @@ batch_size = 100 #Batch size for training
 batch_size_mon = 2000 # Batch size for monitoring and batch normalization
 n_batches = int(numpy.ceil(float(mnist_train.num_examples)/batch_size_mon))
 
+ind = range(mnist_train.num_examples)
+train_ind = ind[:50000]
+val_ind = ind[50000:]
+    
 def preprocessing(data_stream):
     return ForceFloatX(ScaleAndShift(data_stream, 1/255.0, 0.0, which_sources=('features',)), which_sources=('features',))
 
-train_stream_mon = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(mnist_train.num_examples, batch_size_mon)))
-train_stream_bn = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(mnist_train.num_examples, batch_size_mon)))
-train_stream = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(mnist_train.num_examples, batch_size)))
+train_stream_mon = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(train_ind, batch_size_mon)))
+train_stream_bn = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(train_ind, batch_size_mon)))
+train_stream = preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(train_ind, batch_size)))
+valid_stream =  preprocessing(DataStream(mnist_train, iteration_scheme=ShuffledScheme(val_ind, batch_size)))
 test_stream = preprocessing(DataStream(mnist_test, iteration_scheme=ShuffledScheme(mnist_test.num_examples, batch_size_mon)))
 
 ######################
@@ -88,8 +92,8 @@ from blocks.extensions.monitoring import DataStreamMonitoring
 from blocks.algorithms import GradientDescent, Momentum, Adam
 from blocks.extensions.saveload import Checkpoint
 
-from batch_norm import BatchNormExtension
-from extensions import EarlyStopping, LRDecay, MomentumSwitchOff
+from lvq.batch_norm import BatchNormExtension
+from lvq.extensions import EarlyStopping, LRDecay, MomentumSwitchOff
 learning_rate = theano.shared(numpy.float32(1e-2))
 step_rule = Momentum(1e-1, 0.9)
 
@@ -98,9 +102,9 @@ main_loop = MainLoop(
      data_stream=train_stream,
      algorithm=GradientDescent(
         cost=model.outputs[0], parameters=model.parameters, step_rule=step_rule),
-     extensions=[FinishAfter(after_n_epochs=150),
+     extensions=[FinishAfter(after_n_epochs=100),
                  BatchNormExtension(model, train_stream_bn, n_batches),
-                 LRDecay(step_rule.learning_rate, 90, 150), 
+                 LRDecay(step_rule.learning_rate, [20, 40, 60, 80]), 
                  MomentumSwitchOff(step_rule.momentum, 140),
                  DataStreamMonitoring(
                     variables=[test_loss, test_misclass],
