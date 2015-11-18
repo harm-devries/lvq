@@ -66,7 +66,7 @@ Address of Second Author's school - Country of Second Author's school\\
 \maketitle
 
 \begin{abstract}
-We introduce an extension of Generalized Learning Vector Quantization, a popular prototype based classifier, that incorporates non-linear metric learning by a deep neural network. 
+We introduce an extension of Generalized Learning Vector Quantization, a popular prototype based classifier, that incorporates non-linear metric learning by a deep neural network. The extra capacity 
 \end{abstract}
 
 \section{Introduction}
@@ -74,34 +74,35 @@ We introduce an extension of Generalized Learning Vector Quantization, a popular
 \section{Generalized Matrix Learning Vector Quantization}
 We assume we are given training data $(\mathbf{x}^{(n)}, y^{(n)}) \in R^D \times \{0, ..., K-1\}$, $n=1, ..., N$, where $D$ is the dimensionality of the input, and $K$ the number of classes. A LVQ classifier consist of a set of prototypes ${\mathbf{w}_j} \in R^D, j=1, ..., M$ with an associated class label $c(w_j) \in \{1, ..., K\}$. In this work we consider one prototype per class, although it is straightforward to extend to multiple prototypes. Classification follows a nearest prototype scheme i.e. a new data point $\tilde{x}$ is assigned to the class of the nearest prototype $c(\mbox{arg min}_j d(\tilde{x}, \mathbf{w}_j))$ according to some distance measure $d(\tilde{x}, w_j)$. 
 
-Training aims to find the locations of the prototypes such that the data points are assigned to their corresponding class labels. Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} aims to achieve this by minimizing the following training criterion:
+Training aims to find the locations of the prototypes such that the data points are assigned to their corresponding class labels. Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} aims to achieve this objective by minimizing the following training criterion:
 \begin{equation}
- L_{GLVQ}(\theta) = \sum_n \phi\left(\frac{d^{(n)}_+ - d^{(n)}_-}{d^{(n)}_+ + d^{(n)}_-}\right)
+ L_{GLVQ}(\theta) = \sum_n \phi(l^{(n)}) \mbox{~~with~~} l^{(n)} = \frac{d^{(n)}_+ - d^{(n)}_-}{d^{(n)}_+ + d^{(n)}_-}
 \end{equation}
-where $d^+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, w_j)$ and $d^{(n)}_- = \mbox{min}_{c(w_j)\neq y} d(x_i, w_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
+where $d^+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, \mathbf{w}_j)$ and $d^{(n)}_- = \mbox{min}_{c(\mathbf{w}_j)\neq y} d(x_i, \mathbf{w}_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
 
-The main drawback of the GLVQ cost function is that it displays unstable training dynamics when most training examples are incorrectly classified. To see this, note that incorrectly classified examples the gradient with respect to the incorrect distance $\frac{\partial}{\partial d^{(n)}_-} = \frac{4d^{(n)}_-}{(\frac{d^{(n)}_+ - d^{(n))^2}$ is bigger than the gradient to the correct class $\frac{\partial}{-\partial d^{(n)}_+} = \frac{4d^{(n)}_+}{(\frac{d^{(n)}_+ - d^{(n))^2}$. 
+The main drawback of the GLVQ cost function is that it only displays correct training dynamics for correctly classified training examples\cite{sato1996generalized} i.e. when $l^{(n)} < 0$. To see this, note that for incorrectly classified examples the gradient with respect to the incorrect distance $4d^{(n)}_-/(d^{(n)}_+ - d^{(n)})^2$ is bigger than the gradient with respect to the correct class $\partial / \partial d^{(n)}_+ = 4d^{(n)}_+/(d^{(n)}_+ - d^{(n)})^2$. The repelling force on the prototypes then dominates the attractive force which leads to prototypes that diverge from the data distribution. One way to alleviate this problem is not to compare against the \emph{closest} incorrect prototype, but against the average distance to all incorrect prototypes. This smears out the repelling force over several prototypes, and makes it more likely that training dynamics are stable. In Supervised Neural Gas (SNG) \cite{SNG} this idea is realised by the following cost function\footnote{We note two reasonable alternatives: 1) the neighborhood function can be pushed into $l^{(n)}$ i.e. we define $d^{(n)}_- = \sum_{j \neq y^{(n)}} h_\tau(x^{(n)}, j) d(x^{(n)}, \mathbf{w}_j)$ and 2) the neighborhood function can also be replaced by a softargmin $h_\tau(x^{(n)}, j) = \exp(-\tau d(x, w_j)/\sum_k \exp(-\tau d(x^{(n)}, \mathbf{w}_k))$}:
 \begin{equation}
- L_{SNG} = \sum_n \sum_{j\neq y^{(n)}} h_\gamma \phi\left(\frac{d^+ - d(x^{(n)}, w_j)}{d^+ + d(x^{(n)}, w_j)}\right)
+ L_{SNG} = \sum_n \sum_{j\neq y^{(n)}} h_\tau \phi\left(\frac{d^{(n)}_+ - d(x^{(n)}, \mathbf{w}_j)}{d^{(n)}_+ + d(x^{(n)}, \mathbf{w}_j)}\right)
 \end{equation}
-where $h = \exp(-\gamma k)/ \sum_{j=0}^{K-1} \exp(-\gamma j)$ is the neighborhood function 
+Here, the neighborhood function $h_\tau(x^{(n)}, j) = \exp(-\tau k_j)/ \sum_{k=0}^{K-1} \exp(-\tau k)$ determines a (normalized) weight for each incorrect prototype loss that depends on its rank $k_j$, the number of prototypes for which are closer to the considered data point. Our training strategy is to start with small $\tau \rightarrow 0$, essentially replacing the minimum by an average over all incorrect prototypes, and slowly increase $\tau \rightarrow \infty$ such that we recover the GLVQ cost function. 
 
-There are two other important observation to make about the cost function: 
-\begin{itemize}
-\item The loss is invariant to the scale of the distances. That is, if each distance is multiplied by some constant $c \neq 0$\footnote{The closest correct and closest wrong prototype don't change}, the corresponding cost function value remains the same. 
-\item The loss is sensitive to an additive term. That is, if we add some constant $a > 0$ to the distances $d^+$ and $d^-$, this contribution will cancel in the numerator while it will add $2a$ to the denominator. For correctly classified data points (i.e. negative terms) this will increase the cost function value.          
-\end{itemize} 
-In summary, the first bullet point points out that we are maximizing a \emph{scale-invariant} margin. The second point is important to provide low confidence values far away from the data as will be explained in the next section. 
+% There are two other important observation to make about the cost function: 
+% \begin{itemize}
+% \item The loss is invariant to the scale of the distances. That is, if each distance is multiplied by some constant $c \neq 0$\footnote{The closest correct and closest wrong prototype don't change}, the corresponding cost function value remains the same. 
+% \item The loss is sensitive to an additive term. That is, if we add some constant $a > 0$ to the distances $d^+$ and $d^-$, this contribution will cancel in the numerator while it will add $2a$ to the denominator. For correctly classified data points (i.e. negative terms) this will increase the cost function value.          
+% \end{itemize} 
+% In summary, the first bullet point points out that we are maximizing a \emph{scale-invariant} margin. The second point is important to provide low confidence values far away from the data as will be explained in the next section. 
 
 \section{Deep GLVQ}
 We propose to extend the GLVQ cost function by parameterizing the distance function as:
 \begin{equation}
  d(x, w_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
 \end{equation}
-where $f$ is a deep neural network with parameters $\mathbf{\theta}$. 
+where $f$ is a deep neural network with parameters $\mathbf{\theta}$. Usually, the prototypes live in the input space, but here we decide to let them live in the embedding space. It saves computational time because we don't have to do a forward and backward pass through the neural network $f$ for the prototypes. In addition, the embedding space is often much smaller than the input space, hence the prototype parameters take less memory in the embedding space. 
 
+Although prototypes are often considered as class conditional examplars,  
 
-\section{Softmax}
+\section{Related work}
 The last layer in a deep neural network is frequently a softmax\footnote{Better characterised by softargmax}:
 \begin{equation}
 p(\hat{y}_j| \mathbf{x}^{(n)}) = \frac{\exp(w_j^\top \mathbf{x} + b_i)}{\sum_i \exp(w_i^\top \mathbf{x} + b_i)}
@@ -139,9 +140,13 @@ We illustrate the confidence values for
  \includegraphics[width=0.48\textwidth]{../mnist/figures/softmax_conf.pdf}}
 \subfigure[GLVQ]{
  \includegraphics[width=0.48\textwidth]{../mnist/figures/lvq_conf.pdf}}}
-\caption{Histogram of the confidence values for the neural network trained with a) softmax and b) GLVQ on MNIST. The green bars indicate the confidence values for the test set, the blue bars indicate the confidence values for noise drawn from $\mathcal{U}(0.0, 1.0)^{784}$ and the red bars denote the confidence for adversarial examples on the test set. }
+\caption{Histogram of the confidence values for the neural network trained with a) softmax and b) GLVQ on MNIST. The green bars indicate the confidence values for the test set, the blue bars indicate the confidence values for noise drawn from $\mathcal{U}(0.0, 1.0)^{784}$ and the red bars denote the confidence for adversarial examples on the test set.}
 \end{figure}
 
+\subsection{CIFAR10}
+
+
+\section{Conclusion}
 % ****************************************************************************
 % BIBLIOGRAPHY AREA
 % ****************************************************************************
