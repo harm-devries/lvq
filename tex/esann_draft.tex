@@ -69,22 +69,22 @@ Address of Second Author's school - Country of Second Author's school\\
 We introduce an extension of Generalized Learning Vector Quantization, a popular prototype based classifier, that incorporates non-linear metric learning by a deep neural network. 
 \end{abstract}
 
+\section{Introduction}
 
 \section{Generalized Matrix Learning Vector Quantization}
-We assume we are given training data $(\mathbf{x}^{(n)}, y^{(n)}) \in R^D \times \{0, ..., K-1\}$, $n=1, ..., N$, where $D$ is the dimensionality of the input, and $K$ the number of classes. A LVQ classifier consist of a set of prototypes ${\mathbf{w}_j} \in R^D, j=1, ..., M$ with an associated class label $c(w_j) \in \{1, ..., K\}$. In this work we consider one prototype per class, although ordinary GLVQ often requires multiple prototypes per class to account for multiple modes in the input space. Classification takes place by a nearest prototype scheme i.e. a new data point $\tilde{x}$ is assigned to the class of the nearest prototype $c(\mbox{arg min}_j d(\tilde{x}, \mathbf{w}_j))$ according to some distance measure $d(\tilde{x}, w_j)$. Throughout the following we consider the Euclidean distance $d(\tilde{x}, w_j) = \|x - w_j\|_2$ but other differentiable distance measures can be used. 
+We assume we are given training data $(\mathbf{x}^{(n)}, y^{(n)}) \in R^D \times \{0, ..., K-1\}$, $n=1, ..., N$, where $D$ is the dimensionality of the input, and $K$ the number of classes. A LVQ classifier consist of a set of prototypes ${\mathbf{w}_j} \in R^D, j=1, ..., M$ with an associated class label $c(w_j) \in \{1, ..., K\}$. In this work we consider one prototype per class, although it is straightforward to extend to multiple prototypes. Classification follows a nearest prototype scheme i.e. a new data point $\tilde{x}$ is assigned to the class of the nearest prototype $c(\mbox{arg min}_j d(\tilde{x}, \mathbf{w}_j))$ according to some distance measure $d(\tilde{x}, w_j)$. 
 
-Training aims to find the locations of the prototypes such that the data points are mapped to their corresponding class labels. Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} aims to achieve this by minimizing the following training criterion:
+Training aims to find the locations of the prototypes such that the data points are assigned to their corresponding class labels. Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} aims to achieve this by minimizing the following training criterion:
 \begin{equation}
- L_{GLVQ}(\theta) = \sum_n \phi\left(\frac{d^+ - d^-}{d^+ + d^-}\right)
+ L_{GLVQ}(\theta) = \sum_n \phi\left(\frac{d^{(n)}_+ - d^{(n)}_-}{d^{(n)}_+ + d^{(n)}_-}\right)
 \end{equation}
-where $d^+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, w_j)$ and $d^- = \mbox{min}_{c(w_j)\neq y} d(x_i, w_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The complete term is negative when a data point is correctly classified. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. Often, a trade-off between the two terms is achieved by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
+where $d^+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, w_j)$ and $d^{(n)}_- = \mbox{min}_{c(w_j)\neq y} d(x_i, w_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
 
-The GLVQ cost function strongly relies on the fact that most protypes are correctly initialized from the beginning. 
-
+The main drawback of the GLVQ cost function is that it displays unstable training dynamics when most training examples are incorrectly classified. To see this, note that incorrectly classified examples the gradient with respect to the incorrect distance $\frac{\partial}{\partial d^{(n)}_-} = \frac{4d^{(n)}_-}{(\frac{d^{(n)}_+ - d^{(n))^2}$ is bigger than the gradient to the correct class $\frac{\partial}{-\partial d^{(n)}_+} = \frac{4d^{(n)}_+}{(\frac{d^{(n)}_+ - d^{(n))^2}$. 
 \begin{equation}
  L_{SNG} = \sum_n \sum_{j\neq y^{(n)}} h_\gamma \phi\left(\frac{d^+ - d(x^{(n)}, w_j)}{d^+ + d(x^{(n)}, w_j)}\right)
 \end{equation}
-with $h = \exp(-\gamma k)/ \sum_{j=0}^{K-1} \exp(-\gamma j)$
+where $h = \exp(-\gamma k)/ \sum_{j=0}^{K-1} \exp(-\gamma j)$ is the neighborhood function 
 
 There are two other important observation to make about the cost function: 
 \begin{itemize}
@@ -92,6 +92,13 @@ There are two other important observation to make about the cost function:
 \item The loss is sensitive to an additive term. That is, if we add some constant $a > 0$ to the distances $d^+$ and $d^-$, this contribution will cancel in the numerator while it will add $2a$ to the denominator. For correctly classified data points (i.e. negative terms) this will increase the cost function value.          
 \end{itemize} 
 In summary, the first bullet point points out that we are maximizing a \emph{scale-invariant} margin. The second point is important to provide low confidence values far away from the data as will be explained in the next section. 
+
+\section{Deep GLVQ}
+We propose to extend the GLVQ cost function by parameterizing the distance function as:
+\begin{equation}
+ d(x, w_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
+\end{equation}
+where $f$ is a deep neural network with parameters $\mathbf{\theta}$. 
 
 
 \section{Softmax}
@@ -118,20 +125,10 @@ To illustrate the difference with GLVQ, we provide an artifically generated thre
 
 \footnotetext{We multiplied the cost with $-1$ such that higher values indicates higher confidence.}
 
-\section{Deep GLVQ}
-We propose to extend the GLVQ cost function by parameterizing the distance function as:
-\begin{equation}
- d(x, w_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
-\end{equation}
-where $f$ is a deep neural network with parameters $\mathbf{\theta}$. 
-
 
 \section{Experiments}
-We present preliminary experiments on MNIST. 
-
 \subsection{MNIST}
-We use a fully connected neural network with $1200-1200-100$ hidden units, followed by either a log softmax or GLVQ. All units have rectified linear activations. The networks are trained with batch normalization \cite{DBLP:journals/corr/IoffeS15}, and additive gaussian noise on the inputs. 
-
+We use a fully connected neural network with $1200-1200-100$ hidden units, followed by either a log softmax or GLVQ. All units have rectified linear activations. The networks are trained with batch normalization \cite{DBLP:journals/corr/IoffeS15}, and additive gaussian noise of standard deviation $0.5$ on the inputs. 
 
 \subsubsection{Adversarial examples}
 We illustrate the confidence values for 
