@@ -80,7 +80,7 @@ Training aims to find the locations of the prototypes such that the data points 
 \end{equation}
 where $d^+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, \mathbf{w}_j)$ and $d^{(n)}_- = \mbox{min}_{c(\mathbf{w}_j)\neq y} d(x_i, \mathbf{w}_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
 
-The main drawback of the GLVQ cost function is that it only displays correct training dynamics for correctly classified training examples\cite{sato1996generalized} i.e. when $l^{(n)} < 0$. To see this, note that for incorrectly classified examples the gradient with respect to the incorrect distance $4d^{(n)}_-/(d^{(n)}_+ - d^{(n)})^2$ is bigger than the gradient with respect to the correct class $\partial / \partial d^{(n)}_+ = 4d^{(n)}_+/(d^{(n)}_+ - d^{(n)})^2$. The repelling force on the prototypes then dominates the attractive force which leads to prototypes that diverge from the data distribution. One way to alleviate this problem is not to compare against the \emph{closest} incorrect prototype, but against the average distance to all incorrect prototypes. This smears out the repelling force over several prototypes, and makes it more likely that training dynamics are stable. In Supervised Neural Gas (SNG) \cite{SNG} this idea is realised by the following cost function\footnote{We note two reasonable alternatives: 1) the neighborhood function can be pushed into $l^{(n)}$ i.e. we define $d^{(n)}_- = \sum_{j \neq y^{(n)}} h_\tau(x^{(n)}, j) d(x^{(n)}, \mathbf{w}_j)$ and 2) the neighborhood function can also be replaced by a softargmin $h_\tau(x^{(n)}, j) = \exp(-\tau d(x, w_j)/\sum_k \exp(-\tau d(x^{(n)}, \mathbf{w}_k))$}:
+The main drawback of the GLVQ cost function is that it only displays correct training dynamics for correctly classified training examples\cite{sato1996generalized} i.e. when $l^{(n)} < 0$. To see this, note that for incorrectly classified examples the gradient with respect to the incorrect distance $\partial l^{(n)} / \partial d^{(n)}_- = 4d^{(n)}_-/(d^{(n)}_+ - d^{(n)})^2$ is bigger than the gradient with respect to the correct class $\partial l^{(n)} / \partial d^{(n)}_+ = 4d^{(n)}_+/(d^{(n)}_+ - d^{(n)})^2$. The repelling force on the prototypes then dominates the attractive force which leads to prototypes that diverge from the data distribution. One way to alleviate this problem is not to compare against the \emph{closest} incorrect prototype, but against the average distance to all incorrect prototypes. This smears out the repelling force over several prototypes, and makes it more likely that training dynamics are stable. In Supervised Neural Gas (SNG) \cite{SNG} this idea is realised by the following cost function\footnote{We note two reasonable alternatives: 1) the neighborhood function can be pushed into $l^{(n)}$ i.e. we define $d^{(n)}_- = \sum_{j \neq y^{(n)}} h_\tau(x^{(n)}, j) d(x^{(n)}, \mathbf{w}_j)$ and 2) the neighborhood function can also be replaced by a softargmin $h_\tau(x^{(n)}, j) = \exp(-\tau d(x, w_j)/\sum_k \exp(-\tau d(x^{(n)}, \mathbf{w}_k))$}:
 \begin{equation}
  L_{SNG} = \sum_n \sum_{j\neq y^{(n)}} h_\tau \phi\left(\frac{d^{(n)}_+ - d(x^{(n)}, \mathbf{w}_j)}{d^{(n)}_+ + d(x^{(n)}, \mathbf{w}_j)}\right)
 \end{equation}
@@ -96,11 +96,14 @@ Here, the neighborhood function $h_\tau(x^{(n)}, j) = \exp(-\tau k_j)/ \sum_{k=0
 \section{Deep GLVQ}
 We propose to extend the GLVQ cost function by parameterizing the distance function as:
 \begin{equation}
- d(x, w_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
+ d(x, \mathbf{w}_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
 \end{equation}
-where $f$ is a deep neural network with parameters $\mathbf{\theta}$. Usually, the prototypes live in the input space, but here we decide to let them live in the embedding space. It saves computational time because we don't have to do a forward and backward pass through the neural network $f$ for the prototypes. In addition, the embedding space is often much smaller than the input space, hence the prototype parameters take less memory in the embedding space. 
+where $f$ is a deep neural network with parameters $\mathbf{\theta}$. Although the prototypes usually live in the input space, we decide to parameterize them in the embedding space. It saves computational time because we don't have to do a forward and backward pass through the neural network $f$ for the prototypes. Moreover, the dimensionality of the embedding space is often much smaller than the input space, thus the prototype parameters take less memory in the embedding space. 
 
-Although prototypes are often considered as class conditional examplars,  
+
+
+
+
 
 \section{Related work}
 The last layer in a deep neural network is frequently a softmax\footnote{Better characterised by softargmax}:
