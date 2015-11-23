@@ -66,25 +66,41 @@ Address of Second Author's school - Country of Second Author's school\\
 \maketitle
 
 \begin{abstract}
-We introduce an extension of Generalized Learning Vector Quantization, a popular prototype based classifier, that incorporates non-linear metric learning by a deep neural network. The extra capacity 
+We introduce an extension of Generalized Learning Vector Quantization (GLVQ), a popular prototype based classifier, that incorporates non-linear metric learning by a deep neural network. We show that our proposed extension, called Deep Learning Vector Quantization (DLVQ), outperforms the linear metric learning variant GMLVQ. Compared to the traditionally used log-softmax objective, DLVQ slighlty improves classification performance while being more robust against fooling and adversarial examples. 
 \end{abstract}
 
 \section{Introduction}
+Although Deep Neural Networks (DNN) \cite{DBLP:journals/corr/abs-1206-5538} have reached near human-level performance on challenging object recognisition tasks \cite{krizhevsky2012imagenet,DBLP:journals/corr/IoffeS15}, two recent studies \cite{DBLP:journals/corr/SzegedyZSBEGF13,DBLP:journals/corr/NguyenYC14} highlighted that there remain quite some differences with the human visual system. Adversarial examples are a first class of examples \cite{DBLP:journals/corr/SzegedyZSBEGF13} showed that an imperceptable change to an input image causes a DNN to label it completely different. A related result \cite{DBLP:journals/corr/NguyenYC14} that is also possible to generate 
+
+
 
 \section{Generalized Matrix Learning Vector Quantization}
-We assume we are given training data $(\mathbf{x}^{(n)}, y^{(n)}) \in R^D \times \{0, ..., K-1\}$, $n=1, ..., N$, where $D$ is the dimensionality of the input, and $K$ the number of classes. A LVQ classifier consist of a set of prototypes ${\mathbf{w}_j} \in R^D, j=1, ..., M$ with an associated class label $c(w_j) \in \{1, ..., K\}$. In this work we consider one prototype per class, although it is straightforward to extend to multiple prototypes. Classification follows a nearest prototype scheme i.e. a new data point $\tilde{x}$ is assigned to the class of the nearest prototype $c(\mbox{arg min}_j d(\tilde{x}, \mathbf{w}_j))$ according to some distance measure $d(\tilde{x}, w_j)$. 
+We assume we are given training data $(\mathbf{x}^{(n)}, y^{(n)}) \in R^D \times \{0, ..., K-1\}$, $n=1, ..., N$, where $D$ is the dimensionality of the input, and $K$ the number of classes. A LVQ classifier consist of a set of prototypes ${\mathbf{w}_j} \in R^D, j=1, ..., M$ with an associated class label $c(w_j) \in \{1, ..., K\}$. In this work we consider one prototype per class, although it is straightforward to extend to multiple prototypes. Classification follows a nearest prototype scheme i.e. a new data point $\tilde{x}$ is assigned to the class of the nearest prototype $c(\mbox{arg min}_{\mathbf{w}_j} d(\tilde{x}, \mathbf{w}_j))$ according to some distance measure $d(\tilde{x}, w_j)$. 
 
 Training aims to find the locations of the prototypes such that the data points are assigned to their corresponding class labels. Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} aims to achieve this objective by minimizing the following training criterion:
 \begin{equation}
  L_{GLVQ}(\theta) = \sum_n \phi(l^{(n)}) \mbox{~~with~~} l^{(n)} = \frac{d^{(n)}_+ - d^{(n)}_-}{d^{(n)}_+ + d^{(n)}_-}
 \end{equation}
-where $d^+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, \mathbf{w}_j)$ and $d^{(n)}_- = \mbox{min}_{c(\mathbf{w}_j)\neq y} d(x_i, \mathbf{w}_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
+where $d^{(n)}_+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, \mathbf{w}_j)$ and $d^{(n)}_- = \mbox{min}_{c(\mathbf{w}_j)\neq y} d(x_i, \mathbf{w}_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator of $l^{(n)}$ denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
 
-The main drawback of the GLVQ cost function is that it only displays correct training dynamics for correctly classified training examples\cite{sato1996generalized} i.e. when $l^{(n)} < 0$. To see this, note that for incorrectly classified examples the gradient with respect to the incorrect distance $\partial l^{(n)} / \partial d^{(n)}_- = 4d^{(n)}_-/(d^{(n)}_+ - d^{(n)})^2$ is bigger than the gradient with respect to the correct class $\partial l^{(n)} / \partial d^{(n)}_+ = 4d^{(n)}_+/(d^{(n)}_+ - d^{(n)})^2$. The repelling force on the prototypes then dominates the attractive force which leads to prototypes that diverge from the data distribution. One way to alleviate this problem is not to compare against the \emph{closest} incorrect prototype, but against the average distance to all incorrect prototypes. This smears out the repelling force over several prototypes, and makes it more likely that training dynamics are stable. In Supervised Neural Gas (SNG) \cite{SNG} this idea is realised by the following cost function\footnote{We note two reasonable alternatives: 1) the neighborhood function can be pushed into $l^{(n)}$ i.e. we define $d^{(n)}_- = \sum_{j \neq y^{(n)}} h_\tau(x^{(n)}, j) d(x^{(n)}, \mathbf{w}_j)$ and 2) the neighborhood function can also be replaced by a softargmin $h_\tau(x^{(n)}, j) = \exp(-\tau d(x, w_j)/\sum_k \exp(-\tau d(x^{(n)}, \mathbf{w}_k))$}:
+\begin{figure}[t]
+\centering{
+\subfigure[Softmax]{
+ \includegraphics[width=0.48\textwidth, trim={3cm 0 1cm 0}]{../mnist/figures/softmax.pdf}}
+\subfigure[GLVQ]{
+ \includegraphics[width=0.48\textwidth, trim={3cm 0 1cm 0}]{../mnist/figures/lvq.pdf}}}
+\caption{An artifically generated three class problem for which we have trained (a) a softmax classifier and (b) a GLVQ classifier. The background color (white for high) indicates the confidence values for a decision, that is $\mbox{arg max}_i\ p(y_j|x)$ for the softmax and $-l^{(n)}$ for the GLVQ classifier\protect\footnotemark. The softmax classifier will assign a high confidence value to a new data point in the right upper corner (far from the data), while GLVQ will not. }
+\label{figure:diff_glvq_softmax}
+\end{figure}
+
+
+
+The main drawback of the GLVQ cost function is that it only displays correct training dynamics for correctly classified training examples\cite{sato1996generalized}.  
+To see this, note that for incorrectly classified examples the gradient with respect to the incorrect distance $\partial l^{(n)} / \partial d^{(n)}_- = 4d^{(n)}_+/(d^{(n)}_+ - d^{(n)})^2$ is bigger than the gradient with respect to the correct class $\partial l^{(n)} / \partial d^{(n)}_+ = 4d^{(n)}_-/(d^{(n)}_+ - d^{(n)})^2$. The repelling force on the prototypes then dominates the attractive force which leads to prototypes that diverge from the data distribution. One way to alleviate this problem is not to compare against the \emph{closest} incorrect prototype, but against the \emph{average} distance to all incorrect prototypes. This smears out the repelling force over several prototypes, and makes it more likely that training dynamics are stable. \footnotetext{We multiplied $l^{(n)}$ with $-1$ such that higher values indicates higher confidence.} This is the rationale behind Supervised Neural Gas (SNG) \cite{SNG} which minimizes the following cost function\footnote{We note two reasonable alternatives: 1) the neighborhood function can be pushed into $l^{(n)}$ i.e. we define $d^{(n)}_- = \sum_{j \neq y^{(n)}} h_\tau(x^{(n)}, j) d(x^{(n)}, \mathbf{w}_j)$ and 2) the neighborhood function can also be replaced by a softargmin $h_\tau(x^{(n)}, j) = \exp(-\tau d(x, w_j)/\sum_k \exp(-\tau d(x^{(n)}, \mathbf{w}_k))$}:
 \begin{equation}
- L_{SNG} = \sum_n \sum_{j\neq y^{(n)}} h_\tau \phi\left(\frac{d^{(n)}_+ - d(x^{(n)}, \mathbf{w}_j)}{d^{(n)}_+ + d(x^{(n)}, \mathbf{w}_j)}\right)
+ L_{SNG} = \sum_n \sum_{j\neq y^{(n)}} h_\tau(x^{(n)}, j) \phi\left(\frac{d^{(n)}_+ - d(x^{(n)}, \mathbf{w}_j)}{d^{(n)}_+ + d(x^{(n)}, \mathbf{w}_j)}\right)
 \end{equation}
-Here, the neighborhood function $h_\tau(x^{(n)}, j) = \exp(-\tau k_j)/ \sum_{k=0}^{K-1} \exp(-\tau k)$ determines a (normalized) weight for each incorrect prototype loss that depends on its rank $k_j$, the number of prototypes for which are closer to the considered data point. Our training strategy is to start with small $\tau \rightarrow 0$, essentially replacing the minimum by an average over all incorrect prototypes, and slowly increase $\tau \rightarrow \infty$ such that we recover the GLVQ cost function. 
+The neighborhood function $h_\tau(x^{(n)}, j) = \exp(-\tau k_j)/ \sum_{k=0}^{K-1} \exp(-\tau k)$ determines a (normalized) weight for each incorrect prototype loss that depends on its rank $k_j$, the number of prototypes that are closer to the considered data point. Our training strategy is to start with small $\tau \rightarrow 0$, essentially averaging over all incorrect prototypes, and slowly increase $\tau \rightarrow \infty$ such that we recover the GLVQ cost function. 
 
 % There are two other important observation to make about the cost function: 
 % \begin{itemize}
@@ -94,50 +110,42 @@ Here, the neighborhood function $h_\tau(x^{(n)}, j) = \exp(-\tau k_j)/ \sum_{k=0
 % In summary, the first bullet point points out that we are maximizing a \emph{scale-invariant} margin. The second point is important to provide low confidence values far away from the data as will be explained in the next section. 
 
 \section{Deep GLVQ}
-We propose to extend the GLVQ cost function by parameterizing the distance function as:
+It is possible to use any differentiable distance function $d$ within the SNG and GLVQ cost functions. We propose to parameterize the distance function as:
 \begin{equation}
- d(x, \mathbf{w}_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
+ d(\mathbf{x}, \mathbf{w}_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
 \end{equation}
-where $f$ is a deep neural network with parameters $\mathbf{\theta}$. Although the prototypes usually live in the input space, we decide to parameterize them in the embedding space. It saves computational time because we don't have to do a forward and backward pass through the neural network $f$ for the prototypes. Moreover, the dimensionality of the embedding space is often much smaller than the input space, thus the prototype parameters take less memory in the embedding space. 
+where $f$ is a deep neural network with parameters $\mathbf{\theta}$ that non-linearly projects the data points into an embedding space. During training we jointly optimize the neural net parameters $\theta$ and the prototypes $W$. 
 
+Note that a linear projection $f(x) = Ax$ boils down to Generalized Matrix Learning Vector Quantization (GMLVQ) \cite{schneider2009adaptive,bunte2012limited}. A notable difference with that work is that we directly parameterize the prototypes in embedding space. This saves computational time because we avoid a forward pass through the neural network $f$ for the prototypes. Although the prototypes are no longer directly\footnote{The prototypes can be projected back to input space after training} interpretable as class conditional exemplars in input space, recent work\cite{de2013stationarity} has shown that such an interpretation is problematic. Due to the tendency of the GLVQ cost function to learn an injective (many-to-one) mapping $f$, the prototypes can only be considered class-conditional representatives in the embedding space. 
 
-
-
-
-
-\section{Related work}
-The last layer in a deep neural network is frequently a softmax\footnote{Better characterised by softargmax}:
+\section{Difference to log-softmax}
+Most classication problems with neural nets are optimizing the log-softmax\footnote{Better characterised by log-softargmax}:
 \begin{equation}
-p(\hat{y}_j| \mathbf{x}^{(n)}) = \frac{\exp(w_j^\top \mathbf{x} + b_i)}{\sum_i \exp(w_i^\top \mathbf{x} + b_i)}
+L_{SM} = \sum_n \log p(\hat{y}^{n}| \mathbf{x}^{(n)}) = \log \frac{\exp(w_{y^{(n)}}^\top \mathbf{x} + b_{y^{(n)}})}{\sum_i \exp(w_i^\top \mathbf{x} + b_i)}
 \end{equation}
-which provides a distribution over the output labels. It is followed by a cross entropy loss $L_{cross-entropy} = \sum_{k=1}^K p(y_k|\mathbf{x}) \ln p(\hat{y}_k|\mathbf{x})$ which compares the conditional output distribution against the target distribution $p(\mathbf{y}|\mathbf{x})$. For crisp classification problems the target distribution is a $1-$of$-K$ vector, and the loss function simplifies to the negative log likelihood (NLL):
-\begin{equation}
- - \sum_{n=1}^N \ln p(\hat{y}^{(n)}_j|\mathbf{x}^{(n)})
-\end{equation}
+To illustrate the difference with GLVQ, we provide an artifically generated three-class problem as shown in Fig. \ref{figure:diff_glvq_softmax}. Both classifiers produce similar decision boundaries, and the key difference resides in their confidence values. We can see that the softmax generates high confidence values for points far from the decision boundary, even though there is no data to support this decision. It is therefore not surprising that recent work has demonstrated that state-of-the-art neural networks produce so-called \emph{fooling examples}\cite{DBLP:journals/corr/NguyenYC14}, input images that are assigned high confidence values but which do not resemble the input distrbution.  
 
-To illustrate the difference with GLVQ, we provide an artifically generated three-class problem as shown in Fig. \ref{figure:diff_glvq_softmax}. 
-
-\begin{figure}[t]
-\centering{
-\subfigure[Softmax]{
- \includegraphics[width=0.48\textwidth, trim={3cm 0 1cm 0}]{../mnist/figures/softmax.pdf}}
-\subfigure[GLVQ]{
- \includegraphics[width=0.48\textwidth, trim={3cm 0 1cm 0}]{../mnist/figures/lvq.pdf}}}
-\caption{An artifically generated three class problem for which we have trained (a) a softmax classifier and (b) a GLVQ classifier. The background color (white for high) indicates the confidence values for a decision, that is $\mbox{arg max}_i\ p(y_j|x)$ for the softmax and $-\frac{d^{+} - d^{-}}{d^{+} + d^{-}}$\protect\footnotemark for the GLVQ classifier. The softmax classifier will assign a high confidence value to new data point in the right upper corner (far from the data), while GLVQ will not. }
-\label{figure:diff_glvq_softmax}
-\end{figure}
-
-\footnotetext{We multiplied the cost with $-1$ such that higher values indicates higher confidence.}
-
+In contrast, GLVQ learns prototypes that stay close 
 
 \section{Experiments}
+\begin{table}
+ \begin{tabular}{l|llll}
+  & Softmax & DLVQ & GMLVQ (1) & GMLVQ(5)\\
+ \hline
+ No regularization & 1.73 (0.02) & 1.28 (0.07) &  &
+ + batchnorm &   
+ \end{tabular}
+\end{table}
+
 \subsection{MNIST}
-We use a fully connected neural network with $1200-1200-100$ hidden units, followed by either a log softmax or GLVQ. All units have rectified linear activations. The networks are trained with batch normalization \cite{DBLP:journals/corr/IoffeS15}, and additive gaussian noise of standard deviation $0.5$ on the inputs. 
+We use a fully connected neural network with $1200-1200-200$ hidden units, followed by either a log softmax or GLVQ. All units have rectified linear activations. The networks are trained with batch normalization \cite{DBLP:journals/corr/IoffeS15}, and additive gaussian noise of standard deviation $0.5$ on the inputs. 
+
+\subsubsection{Fooling examples}
 
 \subsubsection{Adversarial examples}
 We illustrate the confidence values for 
 
-\begin{figure}[ht]
+\begin{figure}[t]
 \centering{
 \subfigure[Softmax]{
  \includegraphics[width=0.48\textwidth]{../mnist/figures/softmax_conf.pdf}}
@@ -146,10 +154,10 @@ We illustrate the confidence values for
 \caption{Histogram of the confidence values for the neural network trained with a) softmax and b) GLVQ on MNIST. The green bars indicate the confidence values for the test set, the blue bars indicate the confidence values for noise drawn from $\mathcal{U}(0.0, 1.0)^{784}$ and the red bars denote the confidence for adversarial examples on the test set.}
 \end{figure}
 
-\subsection{CIFAR10}
-
+%\subsection{CIFAR10}
 
 \section{Conclusion}
+
 % ****************************************************************************
 % BIBLIOGRAPHY AREA
 % ****************************************************************************

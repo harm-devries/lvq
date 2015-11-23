@@ -25,18 +25,18 @@ y = tensor.imatrix('targets')
 flat_y = tensor.flatten(y, outdim=1)
 
 rect = Rectifier()
-mlp = MLP(dims=[784, 1200, 1200, 100], activations=[rect, rect, rect])
-mlp.weights_init = Uniform(0.0, 0.001)
+mlp = MLP(dims=[784, 1200, 1200, 200], activations=[rect, rect, rect], seed=10)
+mlp.weights_init = Uniform(0.0, 0.01)
 mlp.biases_init = Constant(0.0)
 mlp.initialize()
 
-lin = Linear(100, 10, use_bias=True)
-lin.weights_init = Uniform(0.0, 0.001)
+lin = Linear(200, 10, use_bias=True)
+lin.weights_init = Uniform(0.0, 0.01)
 lin.biases_init = Constant(0.0)
 lin.initialize()
 
-train_out = lin.apply(mlp.apply(flat_x_noise))
-test_out = lin.apply(mlp.inference(flat_x))
+train_out = lin.apply(mlp.apply(flat_x))
+test_out = lin.apply(mlp.apply(flat_x))
 
 sm = Softmax(name='softmax')
 loss = sm.categorical_cross_entropy(flat_y, train_out).mean()
@@ -94,8 +94,8 @@ from blocks.extensions.saveload import Checkpoint
 
 from lvq.batch_norm import BatchNormExtension
 from lvq.extensions import EarlyStopping, LRDecay, MomentumSwitchOff
-learning_rate = theano.shared(numpy.float32(1e-2))
-step_rule = Momentum(1e-1, 0.9)
+learning_rate = theano.shared(numpy.float32(1e-4))
+step_rule = Momentum(5e-2, 0.9)
 
 main_loop = MainLoop(
      model=model,
@@ -105,16 +105,20 @@ main_loop = MainLoop(
      extensions=[FinishAfter(after_n_epochs=100),
                  BatchNormExtension(model, train_stream_bn, n_batches),
                  LRDecay(step_rule.learning_rate, [20, 40, 60, 80]), 
-                 MomentumSwitchOff(step_rule.momentum, 140),
+                 #MomentumSwitchOff(step_rule.momentum, 140),
                  DataStreamMonitoring(
                     variables=[test_loss, test_misclass],
                     data_stream=train_stream_mon,
                     prefix='train'),
                  DataStreamMonitoring(
                     variables=[test_loss, test_misclass],
+                    data_stream=valid_stream,
+                    prefix='valid'),
+                 DataStreamMonitoring(
+                    variables=[test_loss, test_misclass],
                     data_stream=test_stream,
                     prefix='test'),
-                 EarlyStopping('test_misclass', 100, './exp/softmax_2_bn_noise.pkl'),
+                 EarlyStopping('valid_misclass', 100, './exp/softmax_2_bn_noise.pkl'),
                  Timing(), 
                  Printing(after_epoch=True)])
 main_loop.run()
