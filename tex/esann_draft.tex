@@ -42,10 +42,10 @@
 %***********************************************************************
 % AUTHORS INFORMATION AREA
 %***********************************************************************
-\author{Harm de Vries$^1$ and Second author$^2$
+\author{Harm de Vries$^1$ and Roland Memisevic$^1$ and Aaron Courville$^1$
 %
 % Optional short acknowledgment: remove next line if non-needed
-\thanks{This is an optional funding source acknowledgement.}
+%\thanks{This is an optional funding source acknowledgement.}
 %
 % DO NOT MODIFY THE FOLLOWING '\vspace' ARGUMENT
 \vspace{.3cm}\\
@@ -66,23 +66,23 @@ Address of Second Author's school - Country of Second Author's school\\
 \maketitle
 
 \begin{abstract}
+We 
 We introduce an extension of Generalized Learning Vector Quantization (GLVQ), a popular prototype based classifier, that incorporates non-linear metric learning by a deep neural network. We show that our proposed extension, called Deep Learning Vector Quantization (DLVQ), outperforms the linear metric learning variant GMLVQ. Compared to the traditionally used log-softmax objective, DLVQ slighlty improves classification performance while being more robust against fooling and adversarial examples. 
 \end{abstract}
 
 \section{Introduction}
-Although Deep Neural Networks (DNN) \cite{DBLP:journals/corr/abs-1206-5538} have reached near human-level performance on challenging object recognisition tasks \cite{krizhevsky2012imagenet,DBLP:journals/corr/IoffeS15}, two recent studies \cite{DBLP:journals/corr/SzegedyZSBEGF13,DBLP:journals/corr/NguyenYC14} highlighted that there remain quite some differences with the human visual system. Adversarial examples are a first class of examples \cite{DBLP:journals/corr/SzegedyZSBEGF13} showed that an imperceptable change to an input image causes a DNN to label it completely different. A related result \cite{DBLP:journals/corr/NguyenYC14} that is also possible to generate 
+Although Deep Neural Networks (DNN's) \cite{DBLP:journals/corr/abs-1206-5538} have reached near human-level performance on challenging object recognition tasks \cite{krizhevsky2012imagenet,DBLP:journals/corr/IoffeS15}, two recent studies \cite{DBLP:journals/corr/SzegedyZSBEGF13,DBLP:journals/corr/NguyenYC14} highlights that there remain quite some differences with the human visual system. The first study \cite{DBLP:journals/corr/SzegedyZSBEGF13} demonstrates that DNN's are vulnerable to \emph{adversarial examples} -- worst-case, imperceptible changes to the input that causes the DNN to label it completely different. A second result \cite{DBLP:journals/corr/NguyenYC14} shows that DNN's are also easily \emph{fooled}, meaning that images can be produced for which a DNN assigns high confidence while not resembling a natural-looking image.
 
-
-
-\section{Generalized Matrix Learning Vector Quantization}
-We assume we are given training data $(\mathbf{x}^{(n)}, y^{(n)}) \in R^D \times \{0, ..., K-1\}$, $n=1, ..., N$, where $D$ is the dimensionality of the input, and $K$ the number of classes. A LVQ classifier consist of a set of prototypes ${\mathbf{w}_j} \in R^D, j=1, ..., M$ with an associated class label $c(w_j) \in \{1, ..., K\}$. In this work we consider one prototype per class, although it is straightforward to extend to multiple prototypes. Classification follows a nearest prototype scheme i.e. a new data point $\tilde{x}$ is assigned to the class of the nearest prototype $c(\mbox{arg min}_{\mathbf{w}_j} d(\tilde{x}, \mathbf{w}_j))$ according to some distance measure $d(\tilde{x}, w_j)$. 
-
-Training aims to find the locations of the prototypes such that the data points are assigned to their corresponding class labels. Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} aims to achieve this objective by minimizing the following training criterion:
+Our work starts from the observation that such fooling examples might be caused by the extrapolating nature of the log-softmax:
 \begin{equation}
- L_{GLVQ}(\theta) = \sum_n \phi(l^{(n)}) \mbox{~~with~~} l^{(n)} = \frac{d^{(n)}_+ - d^{(n)}_-}{d^{(n)}_+ + d^{(n)}_-}
+L_{SM} = \sum_n \log p(\hat{y}^{n}| \mathbf{x}^{(n)}) = \log \frac{\exp(w_{y^{(n)}}^\top \mathbf{x} + b_{y^{(n)}})}{\sum_i \exp(w_i^\top \mathbf{x} + b_i)},
 \end{equation}
-where $d^{(n)}_+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, \mathbf{w}_j)$ and $d^{(n)}_- = \mbox{min}_{c(\mathbf{w}_j)\neq y} d(x_i, \mathbf{w}_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator of $l^{(n)}$ denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
+the defacto standard classification loss for neural networks. 
+We illustrate this point with an artificially generated three-class problem shown in Fig. \ref{figure:diff_glvq_softmax}. We can see that the softmax gets more confident the farther a point is from the decision boundary, even though there is no data to support this decision. In contrast, a prototype based classifier like Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} produces only high confidence values near the data points (near the prototypes). In this paper we propose to combine deep neural networks with GLVQ. 
 
+
+\section{Generalized Learning Vector Quantization}
+We assume we are given training data $(\mathbf{x}^{(n)}, y^{(n)}) \in R^D \times \{0, ..., K-1\}$, $n=1, ..., N$, where $D$ is the dimensionality of the input, and $K$ the number of classes. A LVQ classifier consist of a set of prototypes ${\mathbf{w}_j} \in R^D, j=1, ..., M$ with an associated class label $c(w_j) \in \{1, ..., K\}$. In this work we consider one prototype per class, although it is straightforward to extend to multiple prototypes. Classification follows a nearest prototype scheme i.e. a new data point $\tilde{x}$ is assigned to the class of the nearest prototype $c(\mbox{arg min}_{\mathbf{w}_j} d(\tilde{x}, \mathbf{w}_j))$ according to some distance measure $d(\tilde{x}, w_j)$. 
 \begin{figure}[t]
 \centering{
 \subfigure[Softmax]{
@@ -93,6 +93,13 @@ where $d^{(n)}_+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, \mathbf{w}_j)$ and $d^{(n)
 \label{figure:diff_glvq_softmax}
 \end{figure}
 
+Training aims to find the locations of the prototypes such that the data points are assigned to their corresponding class labels. Generalized Learning Vector Quantization (GLVQ) \cite{sato1996generalized} aims to achieve this objective by minimizing the following training criterion:
+\begin{equation}
+ L_{GLVQ}(\theta) = \sum_n \phi(l^{(n)}) \mbox{~~with~~} l^{(n)} = \frac{d^{(n)}_+ - d^{(n)}_-}{d^{(n)}_+ + d^{(n)}_-}
+\end{equation}
+where $d^{(n)}_+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, \mathbf{w}_j)$ and $d^{(n)}_- = \mbox{min}_{c(\mathbf{w}_j)\neq y} d(x_i, \mathbf{w}_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator of $l^{(n)}$ denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
+
+Note that the reason that GLVQ is sensitive to an additive term. That is, if we add some constant $a > 0$ to the distances $d^+$ and $d^-$, this contribution will cancel in the numerator while it will add $2a$ to the denominator. For correctly classified data points (i.e. negative terms) this will increase the cost function value. 
 
 
 The main drawback of the GLVQ cost function is that it only displays correct training dynamics for correctly classified training examples\cite{sato1996generalized}.  
@@ -109,7 +116,7 @@ The neighborhood function $h_\tau(x^{(n)}, j) = \exp(-\tau k_j)/ \sum_{k=0}^{K-1
 % \end{itemize} 
 % In summary, the first bullet point points out that we are maximizing a \emph{scale-invariant} margin. The second point is important to provide low confidence values far away from the data as will be explained in the next section. 
 
-\section{Deep GLVQ}
+\section{Deep LVQ}
 It is possible to use any differentiable distance function $d$ within the SNG and GLVQ cost functions. We propose to parameterize the distance function as:
 \begin{equation}
  d(\mathbf{x}, \mathbf{w}_j) = \|f(\mathbf{x}; \theta) - \mathbf{w}_j\|^2_2
@@ -118,21 +125,13 @@ where $f$ is a deep neural network with parameters $\mathbf{\theta}$ that non-li
 
 Note that a linear projection $f(x) = Ax$ boils down to Generalized Matrix Learning Vector Quantization (GMLVQ) \cite{schneider2009adaptive,bunte2012limited}. A notable difference with that work is that we directly parameterize the prototypes in embedding space. This saves computational time because we avoid a forward pass through the neural network $f$ for the prototypes. Although the prototypes are no longer directly\footnote{The prototypes can be projected back to input space after training} interpretable as class conditional exemplars in input space, recent work\cite{de2013stationarity} has shown that such an interpretation is problematic. Due to the tendency of the GLVQ cost function to learn an injective (many-to-one) mapping $f$, the prototypes can only be considered class-conditional representatives in the embedding space. 
 
-\section{Difference to log-softmax}
-Most classication problems with neural nets are optimizing the log-softmax\footnote{Better characterised by log-softargmax}:
-\begin{equation}
-L_{SM} = \sum_n \log p(\hat{y}^{n}| \mathbf{x}^{(n)}) = \log \frac{\exp(w_{y^{(n)}}^\top \mathbf{x} + b_{y^{(n)}})}{\sum_i \exp(w_i^\top \mathbf{x} + b_i)}
-\end{equation}
-To illustrate the difference with GLVQ, we provide an artifically generated three-class problem as shown in Fig. \ref{figure:diff_glvq_softmax}. Both classifiers produce similar decision boundaries, and the key difference resides in their confidence values. We can see that the softmax generates high confidence values for points far from the decision boundary, even though there is no data to support this decision. It is therefore not surprising that recent work has demonstrated that state-of-the-art neural networks produce so-called \emph{fooling examples}\cite{DBLP:journals/corr/NguyenYC14}, input images that are assigned high confidence values but which do not resemble the input distrbution.  
-
-In contrast, GLVQ learns prototypes that stay close 
 
 \section{Experiments}
 \begin{table}
  \begin{tabular}{l|llll}
   & Softmax & DLVQ & GMLVQ (1) & GMLVQ(5)\\
  \hline
- No regularization & 1.73 (0.02) & 1.28 (0.07) &  &
+ No regularization & 1.73 (0.02) & 1.28 (0.07) &  &\\
  + batchnorm &   
  \end{tabular}
 \end{table}
@@ -176,8 +175,8 @@ We illustrate the confidence values for
 % ****************************************************************************
 % END OF BIBLIOGRAPHY AREA
 % ****************************************************************************
-\appendix
-\section{Softmax follows from gaussian class-conditionals}
-Let's assume that the class-conditional distribution $p(x|y_j) = \frac{1}{Z} \exp(-\frac{1}{2\sigma^2}(\mathbf{x} - \mathbf{w}_j)^{\top}(\mathbf{x} - \mathbf{w}_j))$ is an isotropic Gaussian distribution with normalization constant $Z = ..$. 
+%\appendix
+%\section{Softmax follows from gaussian class-conditionals}
+%Let's assume that the class-conditional distribution $p(x|y_j) = \frac{1}{Z} \exp(-\frac{1}{2\sigma^2}(\mathbf{x} - \mathbf{w}_j)^{\top}(\mathbf{x} - \mathbf{w}_j))$ is an isotropic Gaussian distribution with normalization constant $Z = ..$. 
 
 \end{document}
