@@ -68,7 +68,7 @@ We introduce an extension of Generalized Learning Vector Quantization (GLVQ), a 
 \end{abstract}
 
 \section{Introduction}
-Although Deep Neural Networks (DNN's) \cite{DBLP:journals/corr/abs-1206-5538} have reached near human-level performance on challenging object recognition tasks \cite{krizhevsky2012imagenet,DBLP:journals/corr/IoffeS15}, recent studies  highlight that there remain quite some differences with the human visual system. The first intriguing observation made is that DNN's are vulnerable to \emph{adversarial examples} \cite{DBLP:journals/corr/SzegedyZSBEGF13} -- worst-case, imperceptible changes to the input that causes the DNN to label it completely different. Follow-up research \cite{DBLP:journals/corr/NguyenYC14} showed that DNN's are also easily \emph{fooled}, meaning that we can produce images for which a DNN assigns high confidence as belonging to one of the classes while not resembling a natural-looking image.
+Although Deep Neural Networks (DNN's) \cite{DBLP:journals/corr/abs-1206-5538} have reached near human-level performance on challenging object recognition tasks \cite{krizhevsky2012imagenet,DBLP:journals/corr/IoffeS15}, recent studies  highlight that there remain quite some differences with the human visual system. The first intriguing observation made is that DNN's are vulnerable to \emph{adversarial examples} \cite{DBLP:journals/corr/SzegedyZSBEGF13} -- worst-case, imperceptible changes to the input that causes the DNN to label it completely different. Follow-up research \cite{DBLP:journals/corr/NguyenYC14} showed that DNN's are also easily \emph{fooled} -- we can produce images for which a DNN assigns high confidence as belonging to one of the classes while not coming from the data distribution. 
 
 Our work departs from the observation that such fooling examples might be caused by the extrapolating nature of the log-softmax:
 \begin{equation}
@@ -144,12 +144,15 @@ We trained our networks for $100$ epochs with ADAM \cite{DBLP:journals/corr/King
 Our code is implemented in Theano \cite{Bastien-Theano-2012}, and is available at \url{https://github.com/harmdevries89/lvq}. 
 
 
-We compare training without any form of regularization, with batch normalization (BN) \cite{DBLP:journals/corr/IoffeS15}, and additive gaussian noise of standard deviation $0.5$ on the inputs. The results are shown in Table \ref{table:results}. Without any form of regularization, DLVQ significantly outperforms the softmax. This gap reduces when we use batch normalization, which clearly has a better regularization effect for the softmax. By also including input noise, DLVQ still outperforms the softmax and reaches a notable $0.98\%$ test error. 
+We compare training without any form of regularization, with batch normalization (BN) \cite{DBLP:journals/corr/IoffeS15}, and additive gaussian noise of standard deviation $0.5$ on the inputs. The results are shown in Table \ref{table:results}. Without any form of regularization, DLVQ significantly outperforms the softmax. This gap reduces when we use batch normalization, which has a better regularization effect for the softmax. When we also include input noise, DLVQ still outperforms the softmax and reaches a notable $0.98\%$ test error. 
 
 We also compare DLVQ to GMLVQ with $1$ and $10$ prototypes per class. Unsurpisingly, the linear transformation does not have enough capacity resulting in poor performance of $8.2\%$. Even increasing the number of prototypes from $1$ to $10$ only slightly improved the performance to $5.0\%$, clearly worse than DLVQ. 
 
 \subsubsection{Fooling and adversarial examples}
-We verify if DLVQ is more robust against fooling examples than the softmax. As a first test we measure how confident the classifier is when we feed it $10,000$ data points samples from large uniform noise $\mathcal{U}(-10.0, 10.0)^{784}$. We show a histogram of the resulting confidence values in Fig. \ref{fig:confidence}, where for comparison we also show the confidence values for the test set. Interestingly, the confidence values for the softmax are indistinguishable from the test set confidences, while the confidence values for DLVQ For a softmax it's thus possible to \emph{fool} the network without taking derivatives  
+We verify if DLVQ is more robust against fooling examples than the softmax. As a first test we measure how confident the classifier is when we feed it $10,000$ data points sampled from large uniform noise $\mathcal{U}(-10.0, 10.0)^{784}$. A histogram of the resulting confidence values is shown in Fig. \ref{fig:confidence} For the softmax, the confidence values are indistinguishable from the produced confidences on the . As expected,  inputting large input values automatically \emph{fools} a neural network. On the other hand, DLVQ is robust against such outliers by construction.
+
+This automatically raises the questions if DLVQ is not vulnerable to other fooling examples. 
+
 
 \begin{figure}[t]
 \centering{
@@ -161,7 +164,16 @@ We verify if DLVQ is more robust against fooling examples than the softmax. As a
 \label{fig:confidence}
 \end{figure}
 
-%\subsection{CIFAR10}
+%9551
+%1195
+
+\begin{figure}[t]
+\centering{
+ \includegraphics[width=0.48\textwidth]{../mnist/figures/fooling.pdf}}
+}
+\caption{}
+\label{fig:fooling}
+\end{figure}
 
 \section{Conclusion}
 
