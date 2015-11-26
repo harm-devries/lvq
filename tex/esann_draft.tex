@@ -46,7 +46,7 @@
 \author{Harm de Vries, Roland Memisevic and Aaron Courville
 %
 % Optional short acknowledgment: remove next line if non-needed
-%\thanks{This is an optional funding source acknowledgement.}
+% \thanks{Corresponding email: mail@harmdevries.com}
 %
 % DO NOT MODIFY THE FOLLOWING '\vspace' ARGUMENT
 \vspace{.3cm}\\
@@ -64,11 +64,11 @@ Universit\'{e} de Montr\'{e}al \\
 \maketitle
 
 \begin{abstract}
-We introduce an extension of Generalized Learning Vector Quantization (GLVQ), a popular prototype based classifier, that incorporates non-linear metric learning by a deep neural network. We show that our proposed extension, called Deep Learning Vector Quantization (DLVQ), outperforms the linear metric learning variant GMLVQ. Compared to the traditionally used log-softmax objective, DLVQ slighlty improves classification performance while being more robust against fooling and adversarial examples. 
+While deep neural nets (DNN's) achieve impressive performance on image recognition tasks, previous studies have reported that DNN's give high confidence predictions for unrecognizable images. Motivated by the observation that such \emph{fooling examples} might be caused by the extrapolating nature of the log-softmax, we propose to combine neural network with Learning Vector Quantization (LVQ). Our proposed method, called Deep LVQ (DLVQ), achieves comparable performance on MNIST while being more robust against fooling and adversarial examples.
 \end{abstract}
 
 \section{Introduction}
-Although Deep Neural Networks (DNN's) \cite{DBLP:journals/corr/abs-1206-5538} have reached near human-level performance on challenging object recognition tasks \cite{krizhevsky2012imagenet,DBLP:journals/corr/IoffeS15}, recent studies  highlight that there remain quite some differences with the human visual system. The first intriguing observation made is that DNN's are vulnerable to \emph{adversarial examples} \cite{DBLP:journals/corr/SzegedyZSBEGF13} -- worst-case, imperceptible changes to the input that causes the DNN to label it completely different. Follow-up research \cite{DBLP:journals/corr/NguyenYC14} showed that DNN's are also easily \emph{fooled} -- we can produce images for which a DNN assigns high confidence as belonging to one of the classes while not coming from the data distribution. 
+Although Deep Neural Networks (DNN's) \cite{DBLP:journals/corr/abs-1206-5538} have reached near human-level performance on challenging object recognition tasks \cite{krizhevsky2012imagenet,DBLP:journals/corr/IoffeS15}, recent studies  highlight that there remain quite some differences with the human visual system. The first intriguing observation made is that DNN's are vulnerable to \emph{adversarial examples} \cite{DBLP:journals/corr/SzegedyZSBEGF13} -- worst-case, imperceptible changes to the input that causes the DNN to label it completely different. Follow-up research \cite{DBLP:journals/corr/NguyenYC14} showed that DNN's are also easily \emph{fooled} -- images for which a DNN assigns high confidence while not coming from the data distribution. 
 
 Our work departs from the observation that such fooling examples might be caused by the extrapolating nature of the log-softmax:
 \begin{equation}
@@ -97,7 +97,7 @@ Training aims to find the locations of the prototypes such that the data points 
 \end{equation}
 where $d^{(n)}_+ = \mbox{min}_{c(w_j) = y} d(x^{(n)}, \mathbf{w}_j)$ and $d^{(n)}_- = \mbox{min}_{c(\mathbf{w}_j)\neq y} d(x_i, \mathbf{w}_j)$ denote the distance to the closest correct and closest wrong prototype, respectively. The numerator of $l^{(n)}$ denotes the margin between the correct and wrong class, while the denominator scales the term within the interval $[-1, 1]$. The scaling function $\phi$ provides a handle to balance error minimization and margin maximization. Using the step function corresponds to the non-differentiable zero-one loss, and using the identity function corresponds to an average margin maximization. A trade-off between the two terms can be realised by a scaling function $\phi(x) = \exp(\gamma x)$, where $\gamma > 0$ controls the steepness of the exponential. 
 
-Note that the numerator in $l^{(n)}$ is the reason why GLVQ only produces high confidence values when you are close to the data. If move away from the data we add a constant $a > 0$ to the distances $d^+$ and $d^-$, this contribution will cancel in the numerator while it will add $2a$ to the denominator. For correctly classified data points (i.e. negative terms) this will increase the cost function value.
+Note that the numerator in $l^{(n)}$ is the reason why GLVQ only produces high confidence values when you are close to the data. Moving away from the data can be considered as adding constant $a > 0$ to the distances $d^+$ and $d^-$. This contribution will cancel in the numerator while it will add $2a$ to the denominator. For correctly classified data points (i.e. negative terms) this will decrease the confidence value.
 
 \section{Supervised neural gas}
 The main drawback of the GLVQ cost function is that it only displays correct training dynamics for correctly classified training examples\cite{sato1996generalized}.  To see this, note that for incorrectly classified examples the gradient with respect to the incorrect distance $\partial l^{(n)} / \partial d^{(n)}_- = 4d^{(n)}_+/(d^{(n)}_+ - d^{(n)})^2$ is bigger than the gradient with respect to the correct class $\partial l^{(n)} / \partial d^{(n)}_+ = -4d^{(n)}_-/(d^{(n)}_+ - d^{(n)})^2$. The repelling force on the prototypes then dominates the attractive force which leads to prototypes that diverge from the data distribution. We empirically found this to be a problem, when we initially tried to optimize a neural net with the GLVQ cost function. 
@@ -137,21 +137,19 @@ Note that a linear projection $f(x) = Ax$ boils down to Generalized Matrix Learn
  BN + input noise & 1.05 (0.02) & 0.98 (0.03)&&
  \end{tabular}
 \end{table}
-
-\subsection{MNIST}
-The MNIST dataset consist of 70,000 handwritten digits ranging from $0$ to $9$. We make the usual split of $50,000$, $10,000$ and $10,000$ for the training, validation and test set, respectively. We divide the images by $255$ to scale the pixels within $[0, 1]$.  We use a fully connected neural network with $1200-1200-200$ hidden units, followed by either a log softmax or GLVQ. All units have rectified linear activations. We initialize the prototypes for DLVQ as the class conditional means in the embedding space. We start training with a large neighborhood, i.e. $\tau=0.1$, and linearly increase to $\tau=30.0$. 
-We trained our networks for $100$ epochs with ADAM \cite{DBLP:journals/corr/KingmaB14}, and present the test errors by early stopping on the validation error.  
+The MNIST dataset consist of 70,000 handwritten digits ranging from $0$ to $9$. We make the usual split of $50,000$, $10,000$ and $10,000$ for the training, validation and test set, respectively. We use a fully connected neural network with $1200-1200-200$ hidden units, where all units have rectified linear activations. We initialize the prototypes for DLVQ as the class conditional means in the embedding space. We start training with a large neighborhood, i.e. $\tau=0.1$, and linearly increase to $\tau=30.0$. 
+We trained our networks for $100$ epochs, and present the test errors by early stopping on the validation error.  
 Our code is implemented in Theano \cite{Bastien-Theano-2012}, and is available at \url{https://github.com/harmdevries89/lvq}. 
 
 
 We compare training without any form of regularization, with batch normalization (BN) \cite{DBLP:journals/corr/IoffeS15}, and additive gaussian noise of standard deviation $0.5$ on the inputs. The results are shown in Table \ref{table:results}. Without any form of regularization, DLVQ significantly outperforms the softmax. This gap reduces when we use batch normalization, which has a better regularization effect for the softmax. When we also include input noise, DLVQ still outperforms the softmax and reaches a notable $0.98\%$ test error. 
 
-We also compare DLVQ to GMLVQ with $1$ and $10$ prototypes per class. Unsurpisingly, the linear transformation does not have enough capacity resulting in poor performance of $8.2\%$. Even increasing the number of prototypes from $1$ to $10$ only slightly improved the performance to $5.0\%$, clearly worse than DLVQ. 
+We also compare DLVQ to GMLVQ with $1$ and $10$ prototypes per class. Unsurprisingly, the linear transformation does not have enough capacity resulting in poor performance of $8.2\%$. Even increasing the number of prototypes from $1$ to $10$ only slightly improved the performance to $5.0\%$, clearly worse than DLVQ. 
 
-\subsubsection{Fooling and adversarial examples}
-We verify if DLVQ is more robust against fooling examples than the softmax. As a first test we measure how confident the classifier is when we feed it $10,000$ data points sampled from large uniform noise $\mathcal{U}(-10.0, 10.0)^{784}$. A histogram of the resulting confidence values is shown in Fig. \ref{fig:confidence} For the softmax, the confidence values are indistinguishable from the produced confidences on the . As expected,  inputting large input values automatically \emph{fools} a neural network. On the other hand, DLVQ is robust against such outliers by construction.
+\paragraph{Fooling examples}
+We first measure how confident the classifiers are when we feed it $10,000$ data points sampled from large uniform noise $\mathcal{U}(-10.0, 10.0)^{784}$. A histogram of the resulting confidence values is shown in Fig. \ref{fig:confidence}. For the softmax, most confidence values are indistinguishable from the produced confidences on the test set. As expected,  inputting large input values automatically \emph{fools} a softmax neural network. On the other hand, DLVQ is robust against such outliers by construction. 
 
-This automatically raises the questions if DLVQ is not vulnerable to other fooling examples. 
+This automatically raises the questions if DLVQ is not vulnerable to other fooling examples. We investigate this by starting from a random noise image performing gradient descent on the distance $d(x, w_j)$ to a class prototype with respect the input image. We perform $100$ gradient steps such that we reached above $0.99$ confidence level. The resulting images for all $10$ digits are shown in Fig.\ref{fig:fooling}, and show remarkable resemblance with the original digits. 
 
 
 \begin{figure}[t]
@@ -164,18 +162,20 @@ This automatically raises the questions if DLVQ is not vulnerable to other fooli
 \label{fig:confidence}
 \end{figure}
 
-%9551
-%1195
+\paragraph{Adversarial examples}
+We also verify the robustness of DLVQ against adversarial examples by the fast gradient sign method as suggested in \cite{DBLP:journals/corr/GoodfellowSS14}. We use $\epsilon=0.25$, and show the resulting confidence values for the adversarial examples in Fig. \ref{fig:confidence}. We made the confidence negative for the softmax if the predicted class was wrong. The softmax misclassified more than $95\%$ of the adversarial examples, while DLVQ only misclassified $12\%$. 
+
 
 \begin{figure}[t]
 \centering{
- \includegraphics[width=0.48\textwidth]{../mnist/figures/fooling.pdf}}
+ \includegraphics[trim={0 4.5cm 0 7cm}, width=0.9\textwidth]{../mnist/figures/fooling.pdf}
 }
-\caption{}
+\caption{High confidence ($>0.99$) images for DLVQ as generated by gradient descent on random noise. All $10$ digits show some resemblance with the original. }
 \label{fig:fooling}
 \end{figure}
 
 \section{Conclusion}
+We proposed to replace the standard log-softmax loss in neural networks with GLVQ. DLVQ asks inputs of the same class to be mapped to a \emph{point in the embedding space}, which is a harder constraint than the usual requirement of linear separability. Our experiments on MNIST show that DLVQ slightly outperforms the log-softmax, probably due to this regularization effect. More interestingly, we have shown that DLVQ is more robust against fooling and adversarial examples. 
 
 % ****************************************************************************
 % BIBLIOGRAPHY AREA
