@@ -27,6 +27,8 @@ with numpy.load('/Tmp/devries/lvq_nonlin_raw.npz') as f:
     sng.W.set_value(param_values[-1])
 
 X_train, y_train, X_val, y_val, X_test, y_test = load_data()
+print X_train.min()
+print X_train.max()
 
 val_fn = theano.function([x, y], [test_loss, test_misclass])
 
@@ -96,7 +98,7 @@ for j in range(10):
     print conf
     for i in range(50):
         g = f_D(start_x)
-        mom = -10.0 * g
+        mom = -1.0e3 * g
         start_x += numpy.float32(mom)
         start_x = numpy.maximum(start_x, 0.0)
         start_x = numpy.minimum(start_x, 255.0)
