@@ -98,15 +98,14 @@ for j in range(10):
     print conf
     for i in range(50):
         g = f_D(start_x)
-        mom = -1.0e3 * g
+        mom = -1.0e4 * g
         start_x += numpy.float32(mom)
         start_x = numpy.maximum(start_x, 0.0)
         start_x = numpy.minimum(start_x, 255.0)
         dist = f_dist(start_x)
-        print dist
         sorted_dist = numpy.sort(dist, axis=1)
         conf = -1.0*(sorted_dist[:, 0] - sorted_dist[:, 1])/(sorted_dist[:, 0] + sorted_dist[:, 1])
-        print conf
+    print conf
     prototypes[j, :, :, :] = start_x.transpose([0, 2, 3, 1]).reshape((32, 32, 3))
     
   
