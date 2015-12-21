@@ -89,16 +89,13 @@ for j in range(10):
     #start_x = numpy.ones((1, 1, 28, 28)).astype('float32')
     #start_x = numpy.random.uniform(low=-1.0, high=1.0, size=(1, 3, 32, 32)).astype('float32')
     start_x = numpy.float32(X_test[0, :, :, :].reshape((1, 3, 32, 32)))
-    print y_test[0]
     mom = numpy.zeros((1, 3, 32, 32))
     dist = f_dist(start_x)
-    print dist
     sorted_dist = numpy.sort(dist, axis=1)
     conf = -1.0*(sorted_dist[:, 0] - sorted_dist[:, 1])/(sorted_dist[:, 0] + sorted_dist[:, 1])
-    print conf
-    for i in range(50):
+    for i in range(100):
         g = f_D(start_x)
-        mom = -1.0e4 * g
+        mom = -1.0e5 * g
         start_x += numpy.float32(mom)
         start_x = numpy.maximum(start_x, 0.0)
         start_x = numpy.minimum(start_x, 255.0)
