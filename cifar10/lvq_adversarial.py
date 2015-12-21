@@ -82,7 +82,18 @@ f_dist = theano.function([x], D)
 
 
 prototypes = numpy.random.uniform(low=0.0, high=1.0, size=(10, 32, 32, 3))
+mask = tensor.fmatrix()
 for j in range(10):
+    mask_ = numpy.zeros((1, 10))
+    mask_[0, j] = 1.0
+    mask_ = mask_.astype('float32')
+    d_correct = D[0, j]
+    d_incorrect = (D + mask*1e25).min()
+    cost = (d_correct - d_incorrect)/(d_correct + d_incorrect)
+    g_D = theano.grad(cost, x)
+    f_D = theano.function([x, mask], g_D)
+    f_conf = theano.function([x, mask], cost)
+
     g_D = theano.grad(D[0, j], x)
     f_D = theano.function([x], g_D)
 
@@ -90,18 +101,17 @@ for j in range(10):
     #start_x = numpy.random.uniform(low=-1.0, high=1.0, size=(1, 3, 32, 32)).astype('float32')
     start_x = numpy.float32(X_test[0, :, :, :].reshape((1, 3, 32, 32)))
     mom = numpy.zeros((1, 3, 32, 32))
-    dist = f_dist(start_x)
-    sorted_dist = numpy.sort(dist, axis=1)
-    conf = -1.0*(sorted_dist[:, 0] - sorted_dist[:, 1])/(sorted_dist[:, 0] + sorted_dist[:, 1])
+    
     for i in range(100):
+        conf = f_conf(start_x, mask_)
+        if conf < -0.9:
+            break
         g = f_D(start_x)
         mom = -1.0e5 * g
         start_x += numpy.float32(mom)
         start_x = numpy.maximum(start_x, 0.0)
         start_x = numpy.minimum(start_x, 255.0)
         dist = f_dist(start_x)
-        sorted_dist = numpy.sort(dist, axis=1)
-        conf = -1.0*(sorted_dist[:, 0] - sorted_dist[:, 1])/(sorted_dist[:, 0] + sorted_dist[:, 1])
     print conf
     prototypes[j, :, :, :] = start_x.transpose([0, 2, 3, 1]).reshape((32, 32, 3))
     
