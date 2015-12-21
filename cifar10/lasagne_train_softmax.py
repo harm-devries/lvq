@@ -103,23 +103,23 @@ def build_model(input_var):
     network = lasagne.layers.InputLayer(shape=(None, 3, 32, 32),
                                         input_var=input_var)
     network = batch_norm(lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(3, 3),
+            network, num_filters=96, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.HeNormal(), pad='same'))
-    network = lasagne.layers.dropout(network, p=0.4)
+    #network = lasagne.layers.dropout(network, p=0.4)
     network = batch_norm(lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(3, 3),
+            network, num_filters=96, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.HeNormal(), pad='same'))
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
 
     network = batch_norm(lasagne.layers.Conv2DLayer(
-            network, num_filters=128, filter_size=(3, 3),
+            network, num_filters=192, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.HeNormal(), pad='same'))
-    network = lasagne.layers.dropout(network, p=0.4)
+    #network = lasagne.layers.dropout(network, p=0.4)
     network = batch_norm(lasagne.layers.Conv2DLayer(
-            network, num_filters=128, filter_size=(3, 3),
+            network, num_filters=192, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.HeNormal(), pad='same'))        
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
@@ -128,7 +128,7 @@ def build_model(input_var):
             network, num_filters=256, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.HeNormal(), pad='same'))
-    network = lasagne.layers.dropout(network, p=0.4)
+    #network = lasagne.layers.dropout(network, p=0.4)
     network = batch_norm(lasagne.layers.Conv2DLayer(
             network, num_filters=256, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
@@ -144,7 +144,7 @@ def build_model(input_var):
             network, num_filters=512, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.HeNormal(), pad='same'))
-    network = lasagne.layers.dropout(network, p=0.4)
+    #network = lasagne.layers.dropout(network, p=0.4)
     network = batch_norm(lasagne.layers.Conv2DLayer(
             network, num_filters=512, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
@@ -179,12 +179,12 @@ def build_model(input_var):
        
     #network = lasagne.layers.dropout(network, p=0.5)
     network = lasagne.layers.DenseLayer(network,
-            num_units=512, W=lasagne.init.HeNormal(), 
+            num_units=200, W=lasagne.init.HeNormal(), 
             nonlinearity=lasagne.nonlinearities.rectify)
-    #network = lasagne.layers.dropout(network, p=0.5)
-    network = lasagne.layers.DenseLayer(network,
-            num_units=10, W=lasagne.init.HeNormal(), 
-            nonlinearity=None)
+    
+    network = lasagne.layers.DenseLayer(network, num_units=10, 
+                                        W=lasagne.init.HeNormal(), 
+                                        nonlinearity=None)
     
     return network
 
