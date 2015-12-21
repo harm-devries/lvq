@@ -137,6 +137,6 @@ def dispims_color(M, border=0, bordercolor=[0.0, 0.0, 0.0], *imshow_args, **imsh
                   ), 0)
     imshow_keyargs["interpolation"]="nearest"
     pylab.imshow(im, *imshow_args, **imshow_keyargs)
-    pylab.show()
+    pylab.imsave('adversarial.png')
     
 dispims_color(prototypes)
