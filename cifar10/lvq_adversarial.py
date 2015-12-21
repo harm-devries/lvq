@@ -30,18 +30,18 @@ X_train, y_train, X_val, y_val, X_test, y_test = load_data()
 
 val_fn = theano.function([x, y], [test_loss, test_misclass])
 
-val_nll = 0.0
-val_err = 0.0
-val_batches = 0
-for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
-    inputs, targets = batch
-    nll, err = val_fn(inputs, targets)
-    val_nll += nll
-    val_err += err 
-    val_batches += 1
+#val_nll = 0.0
+#val_err = 0.0
+#val_batches = 0
+#for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
+    #inputs, targets = batch
+    #nll, err = val_fn(inputs, targets)
+    #val_nll += nll
+    #val_err += err 
+    #val_batches += 1
 
-print("  validation loss:\t\t{:.6f}".format(val_nll / val_batches))
-print("  validation error:\t\t{:.6f} %".format(val_err*100 / val_batches))
+#print("  validation loss:\t\t{:.6f}".format(val_nll / val_batches))
+#print("  validation error:\t\t{:.6f} %".format(val_err*100 / val_batches))
 
 ##################
 ### Adversarial
@@ -137,6 +137,6 @@ def dispims_color(M, border=0, bordercolor=[0.0, 0.0, 0.0], *imshow_args, **imsh
                   ), 0)
     imshow_keyargs["interpolation"]="nearest"
     pylab.imshow(im, *imshow_args, **imshow_keyargs)
-    pylab.imsave('adversarial.png')
+    pylab.savefig('adversarial.png', bbox_inches='tight')
     
 dispims_color(prototypes)
