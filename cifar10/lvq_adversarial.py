@@ -105,9 +105,10 @@ for j in range(10):
     for i in range(100):
         conf = f_conf(start_x, mask_)
         if conf < -0.9:
+            print i
             break
         g = f_D(start_x)
-        mom = -1.0e5 * g
+        mom = -1.0e3 * g
         start_x += numpy.float32(mom)
         start_x = numpy.maximum(start_x, 0.0)
         start_x = numpy.minimum(start_x, 255.0)
