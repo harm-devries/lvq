@@ -36,30 +36,34 @@ for batch in iterate_minibatches(X_test, y_test, 500, shuffle=False):
 print("  validation loss:\t\t{:.6f}".format(val_nll / val_batches))
 print("  validation error:\t\t{:.6f} %".format(val_err*100 / val_batches))
 
+from scipy.optimize import fmin_l_bfgs_b
 
 prototypes = numpy.random.uniform(low=0.0, high=1.0, size=(10, 32, 32, 3))
 for j in range(10):
     g_D = theano.grad(test_prob[0, j], x)
-    f_D = theano.function([x], g_D)
-    f_conf = theano.function([x], test_prob[0, j])
+    f_conf = theano.function([x], [test_prob[0, j], g_D])
 
     #start_x = numpy.ones((1, 1, 28, 28)).astype('float32')
     #start_x = numpy.random.uniform(low=-1.0, high=1.0, size=(1, 3, 32, 32)).astype('float32')
     start_x = numpy.float32(X_test[0, :, :, :].reshape((1, 3, 32, 32)))
     mom = numpy.zeros((1, 3, 32, 32))
     
-    for i in range(100):
-        conf = f_conf(start_x)
-        if conf > 0.99:
-            print i
-            break
-        g = f_D(start_x)
-        mom = 0.5 * numpy.sign(g)
-        start_x += numpy.float32(mom)
-        start_x = numpy.maximum(start_x, 0.0)
-        start_x = numpy.minimum(start_x, 255.0)
-    print conf
-    prototypes[j, :, :, :] = start_x.transpose([0, 2, 3, 1]).reshape((32, 32, 3))
+    x, f, d = fmin_l_bfgs_b(f_conf, start_x)
+    print f
+    
+    #for i in range(100):
+        #conf = f_conf(start_x, mask_)
+        #if conf < -0.9:
+            #print i
+            #break
+        #g = f_D(start_x)
+        #mom = -1.0e3 * g
+        #start_x += numpy.float32(mom)
+        #start_x = numpy.maximum(start_x, 0.0)
+        #start_x = numpy.minimum(start_x, 255.0)
+        #dist = f_dist(start_x)
+    #print conf
+    #prototypes[j, :, :, :] = start_x.transpose([0, 2, 3, 1]).reshape((32, 32, 3))
     
   
 def dispims_color(M, border=0, bordercolor=[0.0, 0.0, 0.0], *imshow_args, **imshow_keyargs):
@@ -93,4 +97,4 @@ def dispims_color(M, border=0, bordercolor=[0.0, 0.0, 0.0], *imshow_args, **imsh
     pylab.imshow(im, *imshow_args, **imshow_keyargs)
     pylab.savefig('softmax_adversarial.png', bbox_inches='tight')
     
-dispims_color(prototypes)
+#dispims_color(prototypes)
