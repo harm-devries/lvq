@@ -40,11 +40,8 @@ print("  validation error:\t\t{:.6f} %".format(val_err*100 / val_batches))
 prototypes = numpy.random.uniform(low=0.0, high=1.0, size=(10, 32, 32, 3))
 for j in range(10):
     g_D = theano.grad(test_prob[0, j], x)
-    f_D = theano.function([x, mask], g_D)
-    f_conf = theano.function([x], test_prob[0, j])
-
-    g_D = theano.grad(D[0, j], x)
     f_D = theano.function([x], g_D)
+    f_conf = theano.function([x], test_prob[0, j])
 
     #start_x = numpy.ones((1, 1, 28, 28)).astype('float32')
     #start_x = numpy.random.uniform(low=-1.0, high=1.0, size=(1, 3, 32, 32)).astype('float32')
@@ -52,16 +49,15 @@ for j in range(10):
     mom = numpy.zeros((1, 3, 32, 32))
     
     for i in range(100):
-        conf = f_conf(start_x, mask_)
-        if conf < -0.9:
+        conf = f_conf(start_x)
+        if conf > 0.99:
             print i
             break
         g = f_D(start_x)
-        mom = -1.0e3 * g
+        mom = 0.5 * numpy.sign(g)
         start_x += numpy.float32(mom)
         start_x = numpy.maximum(start_x, 0.0)
         start_x = numpy.minimum(start_x, 255.0)
-        dist = f_dist(start_x)
     print conf
     prototypes[j, :, :, :] = start_x.transpose([0, 2, 3, 1]).reshape((32, 32, 3))
     
