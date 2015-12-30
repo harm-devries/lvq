@@ -36,12 +36,12 @@ for batch in iterate_minibatches(X_test, y_test, 500, shuffle=False):
 print("  validation loss:\t\t{:.6f}".format(val_nll / val_batches))
 print("  validation error:\t\t{:.6f} %".format(val_err*100 / val_batches))
 
-from scipy.optimize import fmin_l_bfgs_b
+from scipy.optimize import fmin_l_bfgs_b, minimize
 
 prototypes = numpy.random.uniform(low=0.0, high=1.0, size=(10, 32, 32, 3))
 for j in range(10):
-    g_D = theano.grad(test_prob[0, j], x)
-    f_conf = theano.function([x], [test_prob[0, j], g_D], allow_input_downcast=True)
+    g_D = theano.grad(-1.0e7*test_prob[0, j], x)
+    f_conf = theano.function([x], [-1.0e7*test_prob[0, j], g_D], allow_input_downcast=True)
     
     def f_wrap(x):
         x_reshaped = x.reshape((1, 3, 32, 32))
@@ -50,9 +50,11 @@ for j in range(10):
     #start_x = numpy.ones((1, 1, 28, 28)).astype('float32')
     #start_x = numpy.random.uniform(low=-1.0, high=1.0, size=(1, 3, 32, 32)).astype('float32')
     start_x = numpy.float32(X_test[0, :, :, :].reshape((3072,)))
-    
-    x, f, d = fmin_l_bfgs_b(f_wrap, start_x)
-    print f
+    print start_x.shape
+    print numpy.linalg.norm(f_wrap(start_x)[1])
+    r = minimize(f_wrap, start_x, jac=True, method='BFGS', options={'disp': True, 'ftol': 1e-15, 'gtol': 1e-15})
+    print r.fun
+    print r.nit
     
     #for i in range(100):
         #conf = f_conf(start_x, mask_)
