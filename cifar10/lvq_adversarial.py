@@ -108,7 +108,7 @@ for j in range(10):
             print i
             break
         g = f_D(start_x)
-        mom = -1.0e3 * g
+        mom = -12.0 * numpy.sign(g)
         start_x += numpy.float32(mom)
         start_x = numpy.maximum(start_x, 0.0)
         start_x = numpy.minimum(start_x, 255.0)
