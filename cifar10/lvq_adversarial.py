@@ -94,9 +94,6 @@ for j in range(10):
     f_D = theano.function([x, mask], g_D)
     f_conf = theano.function([x, mask], cost)
 
-    g_D = theano.grad(D[0, j], x)
-    f_D = theano.function([x], g_D)
-
     #start_x = numpy.ones((1, 1, 28, 28)).astype('float32')
     #start_x = numpy.random.uniform(low=-1.0, high=1.0, size=(1, 3, 32, 32)).astype('float32')
     start_x = numpy.float32(X_test[0, :, :, :].reshape((1, 3, 32, 32)))
