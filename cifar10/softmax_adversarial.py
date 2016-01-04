@@ -41,7 +41,7 @@ from scipy.optimize import fmin_l_bfgs_b
 prototypes = numpy.random.uniform(low=0.0, high=1.0, size=(10, 32, 32, 3))
 for j in range(10):
     g_D = theano.grad(test_prob[0, j], x)
-    f_conf = theano.function([x], [test_prob[0, j], g_D], allow_input_downcast=True)
+    f_conf = theano.function([x], [-test_prob[0, j], g_D], allow_input_downcast=True)
     
     def f_wrap(x):
         x_reshaped = x.reshape((1, 3, 32, 32))
