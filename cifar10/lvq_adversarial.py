@@ -100,6 +100,7 @@ for j in range(10):
     #start_x = numpy.ones((1, 1, 28, 28)).astype('float32')
     #start_x = numpy.random.uniform(low=-1.0, high=1.0, size=(1, 3, 32, 32)).astype('float32')
     start_x = numpy.float32(X_test[0, :, :, :].reshape((1, 3, 32, 32)))
+    init_x = start_x
     mom = numpy.zeros((1, 3, 32, 32))
     
     for i in range(100):
@@ -107,12 +108,11 @@ for j in range(10):
         if conf < -0.9:
             print i
             break
-        g = f_D(start_x)
-        mom = -12.0 * numpy.sign(g)
+        g = f_D(start_x, mask_)
+        mom = -1e5 * g
         start_x += numpy.float32(mom)
-        start_x = numpy.maximum(start_x, 0.0)
-        start_x = numpy.minimum(start_x, 255.0)
-        dist = f_dist(start_x)
+        start_x = numpy.maximum(start_x, init_x-5.0)
+        start_x = numpy.minimum(start_x, init_x+5.0)
     print conf
     prototypes[j, :, :, :] = start_x.transpose([0, 2, 3, 1]).reshape((32, 32, 3))
     
