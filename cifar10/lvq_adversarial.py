@@ -80,9 +80,10 @@ f_dist = theano.function([x], D)
 #print numpy.sum(num_adv)
 #print numpy.mean(adv_confidences)
 
-
+n=10
 prototypes = numpy.random.uniform(low=0.0, high=1.0, size=(10, 32, 32, 3))
 mask = tensor.fmatrix()
+print f_dist(numpy.float32(X_test[n, :, :, :].reshape(1, 3, 32, 32)))
 for j in range(10):
     mask_ = numpy.zeros((1, 10))
     mask_[0, j] = 1.0
@@ -90,27 +91,31 @@ for j in range(10):
     d_correct = D[0, j]
     d_incorrect = (D + mask*1e25).min()
     cost = (d_correct - d_incorrect)/(d_correct + d_incorrect)
-    g_D = theano.grad(cost, x)
-    f_D = theano.function([x, mask], g_D)
-    f_conf = theano.function([x, mask], cost)
+    g_D = theano.grad(d_correct, x)
+    f_D = theano.function([x], g_D)
+    f_conf = theano.function([x, mask], [d_correct, cost])
 
     #start_x = numpy.ones((1, 1, 28, 28)).astype('float32')
     #start_x = numpy.random.uniform(low=-1.0, high=1.0, size=(1, 3, 32, 32)).astype('float32')
-    start_x = numpy.float32(X_test[0, :, :, :].reshape((1, 3, 32, 32)))
-    init_x = start_x
-    mom = numpy.zeros((1, 3, 32, 32))
-    
-    for i in range(100):
-        conf = f_conf(start_x, mask_)
-        if conf < -0.9:
-            print i
-            break
-        g = f_D(start_x, mask_)
-        mom = -1e5 * g
-        start_x += numpy.float32(mom)
-        start_x = numpy.maximum(start_x, init_x-5.0)
-        start_x = numpy.minimum(start_x, init_x+5.0)
-    print conf
+    succ = 0.0
+    for lr in [1e5, 1e4, 1e6, 1e3]:
+        if succ == 0.0:
+            start_x = numpy.float32(X_test[n, :, :, :].reshape((1, 3, 32, 32)))
+            init_x = start_x
+            mom = numpy.zeros((1, 3, 32, 32))
+   
+            for i in range(250):
+                dc, conf = f_conf(start_x, mask_)
+                if conf < -0.8:
+                    succ = 1.0
+                    print i
+                    break
+                g = f_D(start_x)
+                mom = -lr * g + 0.9*mom
+                start_x += numpy.float32(mom)
+                start_x = numpy.maximum(numpy.maximum(start_x, init_x-5.0), 0.0)
+                start_x = numpy.minimum(numpy.minimum(start_x, init_x+5.0), 255.0)
+            print dc, conf
     prototypes[j, :, :, :] = start_x.transpose([0, 2, 3, 1]).reshape((32, 32, 3))
     
   
@@ -143,6 +148,6 @@ def dispims_color(M, border=0, bordercolor=[0.0, 0.0, 0.0], *imshow_args, **imsh
                   ), 0)
     imshow_keyargs["interpolation"]="nearest"
     pylab.imshow(im, *imshow_args, **imshow_keyargs)
-    pylab.savefig('adversarial.png', bbox_inches='tight')
+    pylab.savefig('lvq_adversarial_'+str(n)+'.png', bbox_inches='tight')
     
 dispims_color(prototypes)

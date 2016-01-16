@@ -41,7 +41,7 @@ from scipy.optimize import fmin_l_bfgs_b, minimize
 prototypes = numpy.random.uniform(low=0.0, high=1.0, size=(10, 32, 32, 3))
 for j in range(10):
     g_D = theano.grad(test_prob[0, j], x)
-    f_conf = theano.function([x], [-test_prob[0, j], g_D])
+    f_conf = theano.function([x], [test_prob[0, j], g_D])
     
     #def f_wrap(x):
         #x_reshaped = x.reshape((1, 3, 32, 32))
@@ -56,16 +56,16 @@ for j in range(10):
     #r = minimize(f_wrap, start_x, jac=True, method='BFGS', options={'disp': True, 'ftol': 1e-15, 'gtol': 1e-15})
     #print r.fun
     #print r.nit
-    
-    for i in range(100):
+    mom = numpy.zeros((1, 3, 32, 32)) 
+    for i in range(1000):
         conf, g = f_conf(start_x)
-        if conf < -0.9:
+        if conf > 0.99:
             print i
             break
-        mom = -1.0e3 * g
+        mom = 1.0e5 * g + 0.9*mom
         start_x += numpy.float32(mom)
-        start_x = numpy.maximum(start_x, init_x-5.0)
-        start_x = numpy.minimum(start_x, init_x+5.0)
+        start_x = numpy.maximum(numpy.maximum(start_x, init_x-3.0), 0.0)
+        start_x = numpy.minimum(numpy.minimum(start_x, init_x+3.0), 255.0)
     print conf
     prototypes[j, :, :, :] = start_x.transpose([0, 2, 3, 1]).reshape((32, 32, 3))
     
@@ -101,4 +101,4 @@ def dispims_color(M, border=0, bordercolor=[0.0, 0.0, 0.0], *imshow_args, **imsh
     pylab.imshow(im, *imshow_args, **imshow_keyargs)
     pylab.savefig('softmax_adversarial.png', bbox_inches='tight')
     
-#dispims_color(prototypes)
+dispims_color(prototypes)
